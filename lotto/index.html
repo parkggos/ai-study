@@ -1736,20 +1736,34 @@
     }
 
     function applyWindToBall(ball, mixPower, mixTime) {
-      const swirl = mixTime * 2.4 + ball.x * 2.2 - ball.z * 1.6;
-      const gust = Math.sin(mixTime * 5.2 + ball.z * 2.8) * 0.5 + 0.5;
-      const strength = 0.028 * mixPower * (0.55 + gust * 0.45);
+      const { boundaryR } = drumPhysics;
+      const distXZ = Math.hypot(ball.x, ball.z);
+      const outwardX = distXZ > 0.02 ? ball.x / distXZ : Math.cos(ball.num * 0.9);
+      const outwardZ = distXZ > 0.02 ? ball.z / distXZ : Math.sin(ball.num * 0.9);
 
-      const windX = Math.cos(swirl) * strength + Math.cos(mixTime * 1.6) * strength * 0.55;
-      const windZ = Math.sin(swirl) * strength + Math.sin(mixTime * 1.6) * strength * 0.55;
+      const gust = Math.sin(mixTime * 4.2 + ball.num * 0.65) * 0.5 + 0.5;
+      const pulse = Math.sin(mixTime * 1.8) * 0.5 + 0.5;
+      const strength = 0.042 * mixPower * (0.45 + gust * 0.55);
 
-      ball.vx += windX;
-      ball.vz += windZ;
+      // 바깥으로 퍼지는 바람 — 드럼 전체를 쓰도록
+      ball.vx += outwardX * strength * (0.85 + pulse * 0.55);
+      ball.vz += outwardZ * strength * (0.85 + pulse * 0.55);
+
+      const sweep = mixTime * 1.25;
+      ball.vx += Math.cos(sweep) * strength * 0.28;
+      ball.vz += Math.sin(sweep) * strength * 0.28;
+
+      const floorY = getDrumFloorY(ball.x, ball.z, boundaryR, ball.r);
+      const heightAboveFloor = ball.y - floorY;
 
       if (isBallOnFloor(ball)) {
-        ball.vy += strength * (0.45 + Math.random() * 0.35);
-      } else if (!isBallNearFloor(ball)) {
-        ball.vy -= strength * 0.35;
+        ball.vy += 0.11 * mixPower * (0.55 + pulse * 0.75) * (0.45 + gust * 0.55);
+        ball.vx += (Math.random() - 0.5) * 0.05 * mixPower;
+        ball.vz += (Math.random() - 0.5) * 0.05 * mixPower;
+      } else if (heightAboveFloor < ball.r * 10) {
+        ball.vy += strength * (1.1 + pulse * 0.7);
+      } else if (ball.y > boundaryR * 0.2) {
+        ball.vy -= strength * 0.12;
       }
     }
 
@@ -1759,10 +1773,11 @@
         .filter((b) => b.inDrum)
         .forEach((ball) => {
           applyWindToBall(ball, mixPower, mixTime + ball.num * 0.03);
-          ball.vx += (Math.random() - 0.5) * 0.18;
-          ball.vz += (Math.random() - 0.5) * 0.18;
+          const dist = Math.hypot(ball.x, ball.z) || 0.001;
+          ball.vx += (ball.x / dist) * 0.14 * mixPower + (Math.random() - 0.5) * 0.22;
+          ball.vz += (ball.z / dist) * 0.14 * mixPower + (Math.random() - 0.5) * 0.22;
           if (isBallOnFloor(ball)) {
-            ball.vy += 0.06 + Math.random() * 0.08;
+            ball.vy += 0.2 + Math.random() * 0.18;
           }
         });
     }
@@ -1991,35 +2006,45 @@
 
     function runMixingPhysicsSubstep(inDrumBalls, mixPower) {
       const { boundaryR } = drumPhysics;
-      const wallRestitution = 0.74;
-      const ballRestitution = 0.68;
-      const maxSpeed = 0.55;
+      const wallRestitution = 0.78;
+      const ballRestitution = 0.7;
+      const maxSpeed = 1.22;
       const dt = SUBSTEP_DT;
       let bounceEnergy = 0;
 
       drumPhysics.mixPulse = (drumPhysics.mixPulse || 0) + 1;
       drumPhysics.mixTime += 0.07;
-      const gDown = 0.032;
+      const gDown = 0.026;
 
       inDrumBalls.forEach((ball) => {
         ball.vy -= gDown;
         applyWindToBall(ball, mixPower, drumPhysics.mixTime);
       });
 
-      if (drumPhysics.mixPulse % 5 === 0) {
-        const sweep = drumPhysics.mixTime * 2.1;
-        const gustX = Math.cos(sweep) * 0.09 * mixPower;
-        const gustZ = Math.sin(sweep) * 0.09 * mixPower;
+      if (drumPhysics.mixPulse % 6 === 0) {
+        const sweep = drumPhysics.mixTime * 1.6;
+        const gustX = Math.cos(sweep) * 0.14 * mixPower;
+        const gustZ = Math.sin(sweep) * 0.14 * mixPower;
         inDrumBalls.forEach((ball) => {
-          ball.vx += gustX + (Math.random() - 0.5) * 0.06;
-          ball.vz += gustZ + (Math.random() - 0.5) * 0.06;
+          ball.vx += gustX + (Math.random() - 0.5) * 0.1;
+          ball.vz += gustZ + (Math.random() - 0.5) * 0.1;
+        });
+      }
+
+      if (drumPhysics.mixPulse % 9 === 0) {
+        inDrumBalls.forEach((ball) => {
+          if (!isBallNearFloor(ball)) return;
+          const dist = Math.hypot(ball.x, ball.z) || 0.001;
+          ball.vy += 0.28 * mixPower * (0.5 + Math.random() * 0.5);
+          ball.vx += (ball.x / dist) * 0.12 * mixPower;
+          ball.vz += (ball.z / dist) * 0.12 * mixPower;
         });
       }
 
       inDrumBalls.forEach((ball) => {
-        ball.vx *= 0.998;
-        ball.vy *= 0.994;
-        ball.vz *= 0.998;
+        ball.vx *= 0.999;
+        ball.vy *= 0.996;
+        ball.vz *= 0.999;
         ball.x += ball.vx * dt;
         ball.y += ball.vy * dt;
         ball.z += ball.vz * dt;
@@ -2358,7 +2383,7 @@
       const spinTime = fast ? 500 : 1200;
       const mixPower = fast ? 2.8 : 3.8;
 
-      drawStatus.textContent = `${prefix}${analysisNote}추첨기 가동 · 바람에 날려 공이 섞입니다`;
+      drawStatus.textContent = `${prefix}${analysisNote}추첨기 가동 · 바람에 공이 천장까지 날아갑니다`;
       drawStatus.classList.add("drawing");
       clearChuteBall();
 
@@ -2898,7 +2923,7 @@
       }
       buildResultRack();
       clearChuteBall();
-      drawStatus.textContent = "사주 분석 중 · 바람에 날려 공이 섞입니다";
+      drawStatus.textContent = "사주 분석 중 · 바람에 공이 천장까지 날아갑니다";
       drawStatus.classList.add("drawing");
 
       drumPhysics.mixPulse = 0;
