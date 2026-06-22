@@ -42,6 +42,51 @@ function validateRecommendation(data) {
   return null;
 }
 
+async function callGemini(profile, message) {
+  const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
+  if (!apiKey) {
+    throw new Error("GEMINI_API_KEY가 Vercel 환경 변수에 설정되어 있지 않습니다.");
+  }
+
+  const model = process.env.GEMINI_MODEL || "gemini-2.5-flash";
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(apiKey)}`;
+
+  const response = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
+      contents: [{ role: "user", parts: [{ text: buildUserPrompt(profile, message) }] }],
+      generationConfig: {
+        temperature: 0.85,
+        responseMimeType: "application/json",
+      },
+    }),
+  });
+
+  if (!response.ok) {
+    const errText = await response.text();
+    throw new Error(`Gemini API 오류 (${response.status}): ${errText.slice(0, 200)}`);
+  }
+
+  const payload = await response.json();
+  const content = payload.candidates?.[0]?.content?.parts?.[0]?.text;
+  if (!content) throw new Error("AI 응답이 비어 있습니다.");
+
+  let parsed;
+  try {
+    parsed = JSON.parse(content);
+  } catch {
+    throw new Error("AI JSON 파싱 실패");
+  }
+
+  parsed.numbers = [...parsed.numbers].sort((a, b) => a - b);
+  const validationError = validateRecommendation(parsed);
+  if (validationError) throw new Error(validationError);
+
+  return parsed;
+}
+
 async function callOpenAI(profile, message) {
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) {
@@ -89,6 +134,13 @@ async function callOpenAI(profile, message) {
   return parsed;
 }
 
+async function callAI(profile, message) {
+  if (process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY) {
+    return callGemini(profile, message);
+  }
+  return callOpenAI(profile, message);
+}
+
 module.exports = async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
@@ -111,7 +163,7 @@ module.exports = async function handler(req, res) {
     }
 
     const profile = buildSajuProfile({ gender, birthDate });
-    const recommendation = await callOpenAI(profile, message);
+    const recommendation = await callAI(profile, message);
 
     return res.status(200).json({
       profile,
