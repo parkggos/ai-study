@@ -1078,6 +1078,13 @@
       min-height: 44px;
     }
 
+    .chat-input-row .btn-primary {
+      flex: 0 0 auto;
+      min-width: 0;
+      padding: 11px 16px;
+      white-space: nowrap;
+    }
+
     .chat-input-row input[type="text"]:focus {
       outline: none;
       border: 2px solid var(--primary);
@@ -1279,7 +1286,7 @@
                   <div class="chat-messages" id="chatMessages" aria-live="polite"></div>
                   <div class="chat-input-row">
                     <input type="text" id="chatInput" placeholder="추가 질문 (예: 이번 주 재물운 번호)" maxlength="200" />
-                    <button type="button" class="btn-primary" id="chatSendBtn">사주 추천 · 추첨</button>
+                    <button type="button" class="btn-primary" id="chatSendBtn">사주 추첨</button>
                   </div>
                 </div>
 
@@ -2616,7 +2623,7 @@
       sajuChatStarted = false;
       appendChatMessage(
         "bot",
-        "안녕하세요. 성별과 생년월일을 입력한 뒤 ‘사주 추천 · 추첨’을 누르면, 사주에서 좋고 강한 기운을 바탕으로 번호를 추천하고 왼쪽 추첨기로 뽑습니다."
+        "안녕하세요. 성별과 생년월일을 입력한 뒤 ‘사주 추첨’을 누르면, 사주에서 좋고 강한 기운을 바탕으로 번호를 추천하고 왼쪽 추첨기로 뽑습니다."
       );
     }
 
