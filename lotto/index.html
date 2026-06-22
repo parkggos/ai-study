@@ -652,6 +652,23 @@
       padding-top: 16px;
     }
 
+    .controls-primary {
+      display: flex;
+      gap: 8px;
+      flex: 1 1 100%;
+      width: 100%;
+    }
+
+    .controls-primary .btn-primary {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .controls > .btn-outline {
+      flex: 1;
+      min-width: 120px;
+    }
+
     button {
       font-family: inherit;
       font-size: 16px;
@@ -1249,7 +1266,10 @@
               <p class="rack-label">당첨번호 6개 + 보너스</p>
 
               <div class="controls">
-                <button type="button" class="btn-primary" id="drawBtn">추첨하기</button>
+                <div class="controls-primary">
+                  <button type="button" class="btn-primary" id="drawBtn">추첨하기</button>
+                  <button type="button" class="btn-primary" id="analyzeDrawBtn">분석 추첨</button>
+                </div>
                 <button type="button" class="btn-outline" id="autoBtn">5장 자동</button>
                 <button type="button" class="btn-outline" id="clearBtn">기록 지우기</button>
               </div>
@@ -1341,6 +1361,7 @@
     const mixingLabel = document.getElementById("mixingLabel");
     const resultRack = document.getElementById("resultRack");
     const drawBtn = document.getElementById("drawBtn");
+    const analyzeDrawBtn = document.getElementById("analyzeDrawBtn");
     const autoBtn = document.getElementById("autoBtn");
     const clearBtn = document.getElementById("clearBtn");
     const autoCountInput = document.getElementById("autoCount");
@@ -1452,6 +1473,106 @@
       const bonusIdx = Math.floor(Math.random() * pool.length);
       const bonus = pool[bonusIdx];
       return { main, bonus, sorted: [...main].sort((a, b) => a - b) };
+    }
+
+    function weightedPickNumbers(candidates, count) {
+      const picked = [];
+      const pool = candidates.map((item) => ({ ...item }));
+
+      while (picked.length < count && pool.length) {
+        const total = pool.reduce((sum, item) => sum + item.weight, 0);
+        let roll = Math.random() * total;
+        let selectedIndex = pool.length - 1;
+
+        for (let i = 0; i < pool.length; i++) {
+          roll -= pool[i].weight;
+          if (roll <= 0) {
+            selectedIndex = i;
+            break;
+          }
+        }
+
+        picked.push(pool[selectedIndex].num);
+        pool.splice(selectedIndex, 1);
+      }
+
+      return picked;
+    }
+
+    function analyzeHistoricalDraw() {
+      const winners = window.LOTTO_WINNERS || [];
+      if (!winners.length) {
+        return { ...drawFullSet(), analysis: null };
+      }
+
+      const RECENT = 60;
+      const mainFreq = Array(46).fill(0);
+      const mainRecent = Array(46).fill(0);
+      const lastSeenMain = Array(46).fill(winners.length);
+      const bonusFreq = Array(46).fill(0);
+      const bonusRecent = Array(46).fill(0);
+      const lastSeenBonus = Array(46).fill(winners.length);
+
+      winners.forEach((record, index) => {
+        const recencyWeight = index < RECENT ? (RECENT - index) / RECENT : 0;
+
+        record.nums.forEach((num) => {
+          mainFreq[num] += 1;
+          mainRecent[num] += recencyWeight;
+          lastSeenMain[num] = Math.min(lastSeenMain[num], index);
+        });
+
+        bonusFreq[record.bonus] += 1;
+        bonusRecent[record.bonus] += recencyWeight;
+        lastSeenBonus[record.bonus] = Math.min(lastSeenBonus[record.bonus], index);
+      });
+
+      const maxMainFreq = Math.max(...mainFreq.slice(1), 1);
+      const maxMainRecent = Math.max(...mainRecent.slice(1), 1);
+      const maxBonusFreq = Math.max(...bonusFreq.slice(1), 1);
+      const maxBonusRecent = Math.max(...bonusRecent.slice(1), 1);
+      const maxOverdue = winners.length;
+
+      function scoreMain(num) {
+        const frequency = mainFreq[num] / maxMainFreq;
+        const recent = mainRecent[num] / maxMainRecent;
+        const overdue = lastSeenMain[num] / maxOverdue;
+        return frequency * 0.4 + recent * 0.35 + overdue * 0.25;
+      }
+
+      function scoreBonus(num) {
+        const frequency = bonusFreq[num] / maxBonusFreq;
+        const recent = bonusRecent[num] / maxBonusRecent;
+        const overdue = lastSeenBonus[num] / maxOverdue;
+        return frequency * 0.4 + recent * 0.35 + overdue * 0.25;
+      }
+
+      const mainCandidates = [];
+      for (let num = MIN; num <= MAX; num++) {
+        mainCandidates.push({ num, weight: scoreMain(num) + 0.06 });
+      }
+      mainCandidates.sort((a, b) => b.weight - a.weight);
+
+      const main = weightedPickNumbers(mainCandidates.slice(0, 18), COUNT).sort((a, b) => a - b);
+
+      const bonusCandidates = [];
+      for (let num = MIN; num <= MAX; num++) {
+        if (main.includes(num)) continue;
+        bonusCandidates.push({ num, weight: scoreBonus(num) + 0.06 });
+      }
+      bonusCandidates.sort((a, b) => b.weight - a.weight);
+
+      const bonus = weightedPickNumbers(bonusCandidates.slice(0, 12), 1)[0];
+
+      return {
+        main,
+        bonus,
+        sorted: [...main],
+        analysis: {
+          totalDraws: winners.length,
+          latestRound: winners[0]?.n,
+        },
+      };
     }
 
     function disposeBallMesh(ball) {
@@ -2098,6 +2219,7 @@
       fast = false,
       preset = null,
       statusPrefix = "",
+      analysisNote = "",
       sajuContext = null,
       continueMixing = false,
     } = {}) {
@@ -2126,7 +2248,7 @@
       const mixPower = fast ? 2.8 : 3.8;
       const prefix = statusPrefix ? `${statusPrefix} · ` : "";
 
-      drawStatus.textContent = `${prefix}추첨기 가동 · 45개 공 혼합 중…`;
+      drawStatus.textContent = `${prefix}${analysisNote}추첨기 가동 · 45개 공 혼합 중…`;
       drawStatus.classList.add("drawing");
       clearChuteBall();
 
@@ -2226,6 +2348,7 @@
 
     function setControlsDisabled(disabled) {
       drawBtn.disabled = disabled;
+      analyzeDrawBtn.disabled = disabled;
       autoBtn.disabled = disabled;
       clearBtn.disabled = disabled;
       chatSendBtn.disabled = disabled;
@@ -2233,12 +2356,18 @@
       chatResetBtn.disabled = disabled;
     }
 
-    async function performDraw({ addHistory = true, fast = false } = {}) {
+    async function performDraw({
+      addHistory = true,
+      fast = false,
+      preset = null,
+      statusPrefix = "",
+      analysisNote = "",
+    } = {}) {
       if (isDrawing) return null;
       isDrawing = true;
       setControlsDisabled(true);
 
-      const numbers = await runLiveDraw({ fast });
+      const numbers = await runLiveDraw({ fast, preset, statusPrefix, analysisNote });
 
       if (addHistory) {
         addToHistory(numbers);
@@ -2252,6 +2381,20 @@
     drawBtn.addEventListener("click", () => {
       ensureAudio();
       performDraw({ fast: false });
+    });
+
+    analyzeDrawBtn.addEventListener("click", () => {
+      ensureAudio();
+      const analyzed = analyzeHistoricalDraw();
+      const analysisNote = analyzed.analysis
+        ? `역대 ${analyzed.analysis.totalDraws}회 분석 · `
+        : "";
+      performDraw({
+        fast: false,
+        preset: { numbers: analyzed.main, bonus: analyzed.bonus },
+        statusPrefix: "분석 추첨",
+        analysisNote,
+      });
     });
 
     autoBtn.addEventListener("click", async () => {
