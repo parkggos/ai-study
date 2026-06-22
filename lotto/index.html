@@ -1659,7 +1659,7 @@
 
       return shuffled.map((num) => {
         const angle = Math.random() * Math.PI * 2;
-        const radius = Math.sqrt(Math.random()) * (boundaryR - ballR - 0.12) * 0.7;
+        const radius = Math.sqrt(Math.random()) * (boundaryR - ballR - 0.12) * 0.52;
         const x = Math.cos(angle) * radius;
         const z = Math.sin(angle) * radius;
         const floorY = getDrumFloorY(x, z, boundaryR, ballR);
@@ -1711,7 +1711,7 @@
     function settleDrumBalls(steps) {
       const inDrumBalls = drumPhysics.balls.filter((b) => b.inDrum);
       for (let i = 0; i < steps; i++) {
-        runIdlePhysicsSubstep(inDrumBalls, 2);
+        runSettlePhysicsSubstep(inDrumBalls, 2);
       }
       inDrumBalls.forEach((ball) => {
         ball.vx = 0;
@@ -1751,7 +1751,7 @@
       }
 
       const jetWave = Math.sin(mixTime * 4.4 + ball.num * 0.5) * 0.5 + 0.5;
-      const jet = 0.042 * mixPower * (0.38 + jetWave * 0.62);
+      const jet = 0.036 * mixPower * (0.38 + jetWave * 0.62);
 
       ball.vy += jet;
 
@@ -1773,12 +1773,12 @@
         .forEach((ball) => {
           applyFloorJetWind(ball, mixPower, mixTime + ball.num * 0.03);
           if (isBallOnFloor(ball)) {
-            ball.vy += 0.1 + Math.random() * 0.12;
+            ball.vy += 0.08 + Math.random() * 0.1;
             const dist = Math.hypot(ball.x, ball.z) || 0.001;
             const tx = -ball.z / dist;
             const tz = ball.x / dist;
-            ball.vx += tx * 0.1 * mixPower + (Math.random() - 0.5) * 0.11;
-            ball.vz += tz * 0.1 * mixPower + (Math.random() - 0.5) * 0.11;
+            ball.vx += tx * 0.085 * mixPower + (Math.random() - 0.5) * 0.09;
+            ball.vz += tz * 0.085 * mixPower + (Math.random() - 0.5) * 0.09;
           }
         });
     }
@@ -1787,25 +1787,23 @@
       return balls.length > 0 && balls.every((ball) => isBallOnFloor(ball, boundaryR));
     }
 
-    function layAllBallsOnFloor(balls) {
-      const { boundaryR } = drumPhysics;
-      balls.forEach((ball) => {
-        const floorY = getDrumFloorY(ball.x, ball.z, boundaryR, ball.r);
-        if (ball.y > floorY + ball.r * 1.15) {
-          ball.y = floorY + ball.r * 0.95;
-        }
-        ball.vx = 0;
-        ball.vy = 0;
-        ball.vz = 0;
-      });
-      for (let i = 0; i < 140; i++) {
-        runIdlePhysicsSubstep(balls, 2);
-      }
-      balls.forEach((ball) => {
-        ball.vx = 0;
-        ball.vy = 0;
-        ball.vz = 0;
-      });
+    function areBallsClusteredAtBottom(balls, boundaryR = drumPhysics.boundaryR) {
+      if (!balls.length) return true;
+      const avgDist = balls.reduce((sum, ball) => sum + Math.hypot(ball.x, ball.z), 0) / balls.length;
+      return avgDist < boundaryR * 0.4;
+    }
+
+    function applyBowlSlide(ball, boundaryR) {
+      const distXZ = Math.hypot(ball.x, ball.z);
+      if (distXZ < 0.025) return;
+
+      const floorY = getDrumFloorY(ball.x, ball.z, boundaryR, ball.r);
+      const onGround = ball.y <= floorY + ball.r * 1.3;
+      const pull = onGround ? 0.024 : 0.011;
+      const scale = Math.min(distXZ / (boundaryR * 0.7), 1);
+
+      ball.vx -= (ball.x / distXZ) * pull * scale;
+      ball.vz -= (ball.z / distXZ) * pull * scale;
     }
 
     function stopDrumAnimation() {
@@ -1830,7 +1828,8 @@
         }
 
         let frames = 0;
-        const maxFrames = 280;
+        let clusteredFrames = 0;
+        const maxFrames = 360;
 
         const loop = () => {
           for (let s = 0; s < 4; s++) {
@@ -1844,12 +1843,39 @@
             0
           );
           const onFloor = allBallsOnFloor(inDrumBalls);
+          const clustered = areBallsClusteredAtBottom(inDrumBalls);
 
-          if (frames >= maxFrames || (frames > 30 && onFloor && maxSpeed < SLEEP_SPEED * 2.5)) {
-            layAllBallsOnFloor(inDrumBalls);
-            renderDrumFrame();
-            stopDrumAnimation();
-            resolve();
+          if (onFloor && clustered && maxSpeed < SLEEP_SPEED * 3) {
+            clusteredFrames++;
+          } else {
+            clusteredFrames = 0;
+          }
+
+          if (
+            frames >= maxFrames ||
+            (frames > 50 && onFloor && clusteredFrames > 28 && maxSpeed < SLEEP_SPEED * 2.2)
+          ) {
+            let finalize = 0;
+            const finalLoop = () => {
+              for (let s = 0; s < 4; s++) {
+                runSettlePhysicsSubstep(inDrumBalls, 3);
+              }
+              renderDrumFrame();
+              finalize++;
+              if (finalize < 36) {
+                drumPhysics.animId = requestAnimationFrame(finalLoop);
+                return;
+              }
+              inDrumBalls.forEach((ball) => {
+                ball.vx = 0;
+                ball.vy = 0;
+                ball.vz = 0;
+              });
+              renderDrumFrame();
+              stopDrumAnimation();
+              resolve();
+            };
+            finalLoop();
             return;
           }
 
@@ -2015,15 +2041,16 @@
 
     function runSettlePhysicsSubstep(inDrumBalls, collisionPasses) {
       const { boundaryR } = drumPhysics;
-      const wallRestitution = 0.5;
-      const ballRestitution = 0.45;
-      const friction = 0.972;
-      const maxSpeed = 0.4;
+      const wallRestitution = 0.48;
+      const ballRestitution = 0.42;
+      const friction = 0.968;
+      const maxSpeed = 0.36;
       const dt = SUBSTEP_DT;
-      const gDown = 0.038;
+      const gDown = 0.052;
 
       inDrumBalls.forEach((ball) => {
         ball.vy -= gDown;
+        applyBowlSlide(ball, boundaryR);
         ball.vx *= friction;
         ball.vy *= friction;
         ball.vz *= friction;
@@ -2064,13 +2091,13 @@
       const { boundaryR } = drumPhysics;
       const wallRestitution = 0.72;
       const ballRestitution = 0.66;
-      const maxHoriz = 0.58;
-      const maxVert = 1.08;
+      const maxHoriz = 0.48;
+      const maxVert = 1.02;
       const dt = SUBSTEP_DT;
       let bounceEnergy = 0;
 
       drumPhysics.mixPulse = (drumPhysics.mixPulse || 0) + 1;
-      drumPhysics.mixTime += 0.065;
+      drumPhysics.mixTime += 0.056;
       const gDown = 0.042;
 
       inDrumBalls.forEach((ball) => {
@@ -2079,7 +2106,7 @@
       });
 
       if (drumPhysics.mixPulse % 10 === 0) {
-        const blast = 0.21 * mixPower;
+        const blast = 0.18 * mixPower;
         inDrumBalls.forEach((ball) => {
           if (!isBallInFloorJetZone(ball, boundaryR)) return;
           ball.vy += blast * (0.45 + Math.random() * 0.55);
@@ -2092,9 +2119,9 @@
       }
 
       inDrumBalls.forEach((ball) => {
-        ball.vx *= 0.997;
-        ball.vy *= 0.9975;
-        ball.vz *= 0.997;
+        ball.vx *= 0.996;
+        ball.vy *= 0.9965;
+        ball.vz *= 0.996;
         ball.x += ball.vx * dt;
         ball.y += ball.vy * dt;
         ball.z += ball.vz * dt;
@@ -2116,7 +2143,7 @@
       const { balls, mixPower } = drumPhysics;
       const inDrumBalls = balls.filter((b) => b.inDrum);
       let totalBounce = 0;
-      const substeps = mixPower > 0 ? 6 : 2;
+      const substeps = mixPower > 0 ? 5 : 2;
 
       for (let s = 0; s < substeps; s++) {
         totalBounce += physicsSubstep(inDrumBalls, mixPower);
@@ -2431,7 +2458,7 @@
       const bonusSlot = document.getElementById("bonusSlot");
       const drawOrder = shuffleArray(main);
       const spinTime = fast ? 500 : 1200;
-      const mixPower = fast ? 2.8 : 3.8;
+      const mixPower = fast ? 2.6 : 3.5;
 
       drawStatus.textContent = `${prefix}${analysisNote}추첨기 가동 · 바닥 바람으로 공이 막 돌아다닙니다`;
       drawStatus.classList.add("drawing");
