@@ -181,6 +181,54 @@
       margin-bottom: 24px;
     }
 
+    .draw-layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      gap: 24px;
+      align-items: start;
+    }
+
+    .draw-column {
+      min-width: 0;
+    }
+
+    .saju-column {
+      min-width: 0;
+    }
+
+    .saju-section {
+      margin-top: 0;
+      padding-top: 0;
+      border-top: none;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .saju-section .chat-shell {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .saju-section .chat-messages {
+      flex: 1;
+      min-height: 240px;
+      max-height: none;
+    }
+
+    @media (max-width: 768px) {
+      .draw-layout {
+        grid-template-columns: 1fr;
+      }
+
+      .saju-section {
+        margin-top: 8px;
+        padding-top: 24px;
+        border-top: 1px solid var(--hairline);
+      }
+    }
+
     .draw-status {
       text-align: center;
       font-size: 15px;
@@ -895,12 +943,6 @@
       overflow: hidden;
     }
 
-    .saju-section {
-      margin-top: 28px;
-      padding-top: 24px;
-      border-top: 1px solid var(--hairline);
-    }
-
     .saju-section-title {
       font-size: 14px;
       font-weight: 700;
@@ -1088,76 +1130,82 @@
         <h2 class="card-title">추첨 · 사주</h2>
         <div class="draw-stage">
           <p class="draw-status" id="drawStatus">추첨기 준비 완료 · 추첨하기를 눌러주세요</p>
-          <div class="lotto-machine">
-            <div class="machine-stand">
-              <div class="stand-neck" aria-hidden="true"></div>
-              <div class="globe-housing" id="globeHousing">
-                <div id="drumViewport" aria-label="로또 추첨기 구체"></div>
-                <div class="globe-cap" aria-hidden="true"></div>
-                <div class="globe-frame" aria-hidden="true"></div>
-              </div>
-              <div class="exit-arm">
-                <div class="exit-neck" aria-hidden="true"></div>
-                <div class="display-tube">
-                  <div class="chute-ball" id="chuteBall">?</div>
+          <div class="draw-layout">
+            <div class="draw-column">
+              <div class="lotto-machine">
+                <div class="machine-stand">
+                  <div class="stand-neck" aria-hidden="true"></div>
+                  <div class="globe-housing" id="globeHousing">
+                    <div id="drumViewport" aria-label="로또 추첨기 구체"></div>
+                    <div class="globe-cap" aria-hidden="true"></div>
+                    <div class="globe-frame" aria-hidden="true"></div>
+                  </div>
+                  <div class="exit-arm">
+                    <div class="exit-neck" aria-hidden="true"></div>
+                    <div class="display-tube">
+                      <div class="chute-ball" id="chuteBall">?</div>
+                    </div>
+                  </div>
+                  <div class="stand-base" aria-hidden="true"></div>
+                  <div class="stand-plate" aria-hidden="true"></div>
+                </div>
+                <div class="machine-meta">
+                  <span id="ballCountLabel">공 45개</span>
+                  <span id="mixingLabel"><span class="mixing-indicator"></span>대기</span>
                 </div>
               </div>
-              <div class="stand-base" aria-hidden="true"></div>
-              <div class="stand-plate" aria-hidden="true"></div>
-            </div>
-            <div class="machine-meta">
-              <span id="ballCountLabel">공 45개</span>
-              <span id="mixingLabel"><span class="mixing-indicator"></span>대기</span>
-            </div>
-          </div>
-          <div class="result-rack-wrap">
-            <div class="result-rack" id="resultRack" aria-label="당첨 번호"></div>
-          </div>
-          <p class="rack-label">당첨번호 6개 + 보너스</p>
-        </div>
+              <div class="result-rack-wrap">
+                <div class="result-rack" id="resultRack" aria-label="당첨 번호"></div>
+              </div>
+              <p class="rack-label">당첨번호 6개 + 보너스</p>
 
-        <div class="controls">
-          <button type="button" class="btn-primary" id="drawBtn">추첨하기</button>
-          <button type="button" class="btn-outline" id="autoBtn">5장 자동</button>
-          <button type="button" class="btn-outline" id="clearBtn">기록 지우기</button>
-        </div>
+              <div class="controls">
+                <button type="button" class="btn-primary" id="drawBtn">추첨하기</button>
+                <button type="button" class="btn-outline" id="autoBtn">5장 자동</button>
+                <button type="button" class="btn-outline" id="clearBtn">기록 지우기</button>
+              </div>
 
-        <div class="options">
-          <label>
-            자동 생성
-            <input type="number" id="autoCount" min="1" max="20" value="5" />
-            장
-          </label>
-        </div>
-
-        <div class="saju-section">
-          <h3 class="saju-section-title">사주 로또 추천</h3>
-          <p class="saju-note">성별·생년월일을 입력하면 사주(년·월·일주)로 번호를 추천하고, 추첨기에서 해당 번호를 뽑습니다.</p>
-
-          <form class="saju-profile" id="sajuProfileForm">
-            <div class="saju-profile-row">
-              <span>성별</span>
-              <div class="saju-gender-group">
-                <label><input type="radio" name="sajuGender" value="male" checked /> 남성</label>
-                <label><input type="radio" name="sajuGender" value="female" /> 여성</label>
+              <div class="options">
+                <label>
+                  자동 생성
+                  <input type="number" id="autoCount" min="1" max="20" value="5" />
+                  장
+                </label>
               </div>
             </div>
-            <div class="saju-profile-row">
-              <label for="sajuBirthDate">생년월일</label>
-              <input type="date" id="sajuBirthDate" required />
-            </div>
-          </form>
 
-          <div class="chat-shell">
-            <div class="chat-messages" id="chatMessages" aria-live="polite"></div>
-            <div class="chat-input-row">
-              <input type="text" id="chatInput" placeholder="추가 질문 (예: 이번 주 재물운 번호)" maxlength="200" />
-              <button type="button" class="btn-primary" id="chatSendBtn">사주 추천 · 추첨</button>
-            </div>
-          </div>
+            <div class="saju-column">
+              <div class="saju-section">
+                <h3 class="saju-section-title">사주 로또 추천</h3>
+                <p class="saju-note">성별·생년월일을 입력하고 추천하면, 분석하는 동안 왼쪽 추첨기가 혼합됩니다.</p>
 
-          <div class="chat-actions">
-            <button type="button" class="btn-outline" id="chatResetBtn">대화 초기화</button>
+                <form class="saju-profile" id="sajuProfileForm">
+                  <div class="saju-profile-row">
+                    <span>성별</span>
+                    <div class="saju-gender-group">
+                      <label><input type="radio" name="sajuGender" value="male" checked /> 남성</label>
+                      <label><input type="radio" name="sajuGender" value="female" /> 여성</label>
+                    </div>
+                  </div>
+                  <div class="saju-profile-row">
+                    <label for="sajuBirthDate">생년월일</label>
+                    <input type="date" id="sajuBirthDate" required />
+                  </div>
+                </form>
+
+                <div class="chat-shell">
+                  <div class="chat-messages" id="chatMessages" aria-live="polite"></div>
+                  <div class="chat-input-row">
+                    <input type="text" id="chatInput" placeholder="추가 질문 (예: 이번 주 재물운 번호)" maxlength="200" />
+                    <button type="button" class="btn-primary" id="chatSendBtn">사주 추천 · 추첨</button>
+                  </div>
+                </div>
+
+                <div class="chat-actions">
+                  <button type="button" class="btn-outline" id="chatResetBtn">대화 초기화</button>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </section>
@@ -2283,8 +2331,35 @@
       sajuChatStarted = false;
       appendChatMessage(
         "bot",
-        "안녕하세요. 성별과 생년월일을 입력한 뒤 ‘사주 추천 · 추첨’을 누르면 사주 번호를 추천하고, 위 추첨기에서 해당 번호를 뽑습니다."
+        "안녕하세요. 성별과 생년월일을 입력한 뒤 ‘사주 추천 · 추첨’을 누르면 분석하는 동안 왼쪽 추첨기가 돌아가고, 추천 번호를 뽑습니다."
       );
+    }
+
+    function startSajuAnalysisMix() {
+      ensureAudio();
+      resetAllDrumBalls();
+      buildResultRack();
+      drawStatus.textContent = "사주 분석 중 · 추첨기 혼합 중…";
+      drawStatus.classList.add("drawing");
+
+      const pool = Array.from({ length: MAX - MIN + 1 }, (_, i) => i + MIN);
+      startDrumLoop(3.4);
+
+      let tick = 0;
+      const chuteInterval = setInterval(() => {
+        const fake = pool[Math.floor(Math.random() * pool.length)];
+        setChuteNumber(fake, true);
+        if (tick % 4 === 0) playMixTick();
+        tick++;
+      }, 70);
+
+      return () => clearInterval(chuteInterval);
+    }
+
+    function stopSajuAnalysisMix() {
+      stopDrumLoop();
+      chuteBall.textContent = "?";
+      chuteBall.className = "chute-ball";
     }
 
     const SAJU_API_URL = `${window.location.origin}/api/saju-lotto`;
@@ -2316,6 +2391,7 @@
       chatInput.value = "";
 
       const loadingMsg = appendChatMessage("loading", "사주를 분석하고 번호를 추천하는 중…");
+      const stopChuteSpin = startSajuAnalysisMix();
 
       try {
         const response = await fetch(SAJU_API_URL, {
@@ -2333,16 +2409,18 @@
         }
 
         loadingMsg.remove();
+        stopChuteSpin();
 
         if (!response.ok) {
+          stopSajuAnalysisMix();
+          drawStatus.textContent = "사주 추천 실패 · 다시 시도해 주세요";
+          drawStatus.classList.remove("drawing");
           appendChatMessage("error", data.error || `추천 요청에 실패했습니다. (${response.status})`);
           return;
         }
 
         appendChatMessage("bot", buildRecommendationNode(data.recommendation, data.profile));
         sajuChatStarted = true;
-
-        document.querySelector(".draw-stage")?.scrollIntoView({ behavior: "smooth", block: "start" });
 
         const sorted = await runLiveDraw({
           fast: false,
@@ -2352,6 +2430,10 @@
         addToHistory(sorted);
       } catch (err) {
         loadingMsg.remove();
+        stopChuteSpin();
+        stopSajuAnalysisMix();
+        drawStatus.textContent = "사주 추천 실패 · 다시 시도해 주세요";
+        drawStatus.classList.remove("drawing");
         appendChatMessage(
           "error",
           err instanceof Error && err.message
