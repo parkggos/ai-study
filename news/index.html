@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI News Reporter</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #0f172a;
+      --bg-card: #ffffff;
+      --primary: #2563eb;
+      --primary-hover: #1d4ed8;
+      --text: #0f172a;
+      --text-muted: #64748b;
+      --border: #e2e8f0;
+      --surface: #f8fafc;
+      --success: #16a34a;
+      --error: #dc2626;
+      --radius: 12px;
+      --shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      min-height: 100vh;
+      font-family: "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
+      background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 50%, #0f172a 100%);
+      color: var(--text);
+      line-height: 1.6;
+    }
+
+    .page {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 48px 20px 32px;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 680px;
+    }
+
+    .badge {
+      display: inline-block;
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      color: #93c5fd;
+      margin-bottom: 12px;
+    }
+
+    h1 {
+      font-size: clamp(28px, 5vw, 36px);
+      font-weight: 700;
+      color: #fff;
+      margin-bottom: 12px;
+    }
+
+    .subtitle {
+      font-size: 16px;
+      color: #94a3b8;
+      margin-bottom: 32px;
+      max-width: 520px;
+    }
+
+    .card {
+      background: var(--bg-card);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 32px;
+      margin-bottom: 24px;
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    label {
+      display: block;
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 8px;
+    }
+
+    input[type="text"],
+    input[type="email"] {
+      width: 100%;
+      padding: 12px 16px;
+      font-size: 15px;
+      font-family: inherit;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: #fff;
+      color: var(--text);
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+
+    input:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+    }
+
+    .examples {
+      margin-top: 16px;
+    }
+
+    .examples-label {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-bottom: 10px;
+    }
+
+    .chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .chip {
+      font-family: inherit;
+      font-size: 13px;
+      padding: 6px 14px;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      background: var(--surface);
+      color: var(--text);
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .chip:hover {
+      border-color: var(--primary);
+      color: var(--primary);
+      background: #eff6ff;
+    }
+
+    .submit-btn {
+      width: 100%;
+      padding: 14px 24px;
+      font-size: 15px;
+      font-weight: 600;
+      font-family: inherit;
+      color: #fff;
+      background: var(--primary);
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background 0.15s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      min-height: 48px;
+    }
+
+    .submit-btn:hover:not(:disabled) {
+      background: var(--primary-hover);
+    }
+
+    .submit-btn:disabled {
+      opacity: 0.7;
+      cursor: not-allowed;
+    }
+
+    .spinner {
+      width: 18px;
+      height: 18px;
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      display: none;
+    }
+
+    .submit-btn.loading .spinner {
+      display: block;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .alert {
+      padding: 12px 16px;
+      border-radius: 8px;
+      font-size: 14px;
+      margin-bottom: 20px;
+      display: none;
+    }
+
+    .alert.error {
+      display: block;
+      background: #fef2f2;
+      color: var(--error);
+      border: 1px solid #fecaca;
+    }
+
+    .alert.success {
+      display: block;
+      background: #f0fdf4;
+      color: var(--success);
+      border: 1px solid #bbf7d0;
+    }
+
+    .report-section {
+      display: none;
+    }
+
+    .report-section.visible {
+      display: block;
+    }
+
+    .report-header {
+      border-bottom: 2px solid var(--primary);
+      padding-bottom: 16px;
+      margin-bottom: 24px;
+    }
+
+    .report-header h2 {
+      font-size: 22px;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+
+    .report-date {
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+
+    .summary-box {
+      background: var(--surface);
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 24px;
+    }
+
+    .summary-box h3 {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 8px;
+    }
+
+    .summary-box p {
+      font-size: 15px;
+      line-height: 1.7;
+    }
+
+    .section-title {
+      font-size: 17px;
+      font-weight: 700;
+      margin-bottom: 16px;
+    }
+
+    .issue-item {
+      padding-bottom: 20px;
+      margin-bottom: 20px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .issue-item:last-child {
+      border-bottom: none;
+      margin-bottom: 0;
+      padding-bottom: 0;
+    }
+
+    .issue-num {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--primary);
+      margin-bottom: 4px;
+    }
+
+    .issue-title {
+      font-size: 16px;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+
+    .issue-desc {
+      font-size: 14px;
+      color: #334155;
+      line-height: 1.7;
+      margin-bottom: 8px;
+    }
+
+    .issue-source {
+      font-size: 13px;
+    }
+
+    .issue-source a {
+      color: var(--primary);
+      text-decoration: none;
+    }
+
+    .issue-source a:hover {
+      text-decoration: underline;
+    }
+
+    .text-block {
+      font-size: 14px;
+      color: #334155;
+      line-height: 1.8;
+      margin-bottom: 24px;
+    }
+
+    .sources-list {
+      list-style: none;
+      padding: 0;
+    }
+
+    .sources-list li {
+      margin-bottom: 8px;
+    }
+
+    .sources-list a {
+      font-size: 13px;
+      color: var(--primary);
+      text-decoration: none;
+      word-break: break-all;
+    }
+
+    .sources-list a:hover {
+      text-decoration: underline;
+    }
+
+    .footer {
+      text-align: center;
+      font-size: 13px;
+      color: #64748b;
+      margin-top: auto;
+      padding-top: 24px;
+    }
+
+  </style>
+</head>
+<body>
+  <div class="page">
+    <div class="container">
+      <span class="badge">AI News Reporter</span>
+      <h1>📰 AI News Reporter</h1>
+      <p class="subtitle">
+        키워드를 입력하면 최근 7일 이내 주요 이슈를 자동으로 수집하여 보고서를 생성하고 이메일로 발송합니다.
+      </p>
+
+      <div class="card">
+        <form id="reportForm">
+          <div id="alertBox" class="alert" role="alert"></div>
+
+          <div class="form-group">
+            <label for="keyword">키워드</label>
+            <input type="text" id="keyword" name="keyword" placeholder="예: OpenAI, AI 반도체, 생성형 AI" required />
+          </div>
+
+          <div class="form-group">
+            <label for="email">이메일</label>
+            <input type="email" id="email" name="email" placeholder="보고서를 받을 이메일 주소" required />
+          </div>
+
+          <div class="examples">
+            <p class="examples-label">예시:</p>
+            <div class="chips" id="exampleChips">
+              <button type="button" class="chip" data-keyword="OpenAI">OpenAI</button>
+              <button type="button" class="chip" data-keyword="Gemini">Gemini</button>
+              <button type="button" class="chip" data-keyword="AI 반도체">AI 반도체</button>
+              <button type="button" class="chip" data-keyword="생성형 AI">생성형 AI</button>
+              <button type="button" class="chip" data-keyword="스타트업 투자">스타트업 투자</button>
+              <button type="button" class="chip" data-keyword="공공데이터">공공데이터</button>
+              <button type="button" class="chip" data-keyword="신약개발">신약개발</button>
+            </div>
+          </div>
+
+          <button type="submit" class="submit-btn" id="submitBtn">
+            <span class="spinner"></span>
+            <span class="btn-text">보고서 생성 및 이메일 발송</span>
+          </button>
+        </form>
+      </div>
+
+      <div class="card report-section" id="reportSection">
+        <div class="report-header">
+          <h2 id="reportTitle"></h2>
+          <p class="report-date" id="reportDate"></p>
+        </div>
+
+        <div class="summary-box">
+          <h3>요약</h3>
+          <p id="reportSummary"></p>
+        </div>
+
+        <h3 class="section-title">주요 이슈</h3>
+        <div id="issuesList"></div>
+
+        <h3 class="section-title">트렌드 분석</h3>
+        <p class="text-block" id="reportTrend"></p>
+
+        <h3 class="section-title">결론</h3>
+        <p class="text-block" id="reportConclusion"></p>
+
+        <div id="sourcesBlock" style="display:none;">
+          <h3 class="section-title">참고 출처</h3>
+          <ul class="sources-list" id="sourcesList"></ul>
+        </div>
+      </div>
+    </div>
+
+    <p class="footer">Powered by Gemini (Google Search Grounding) · Resend · Vercel</p>
+  </div>
+
+  <script>
+    const form = document.getElementById("reportForm");
+    const submitBtn = document.getElementById("submitBtn");
+    const alertBox = document.getElementById("alertBox");
+    const reportSection = document.getElementById("reportSection");
+    const keywordInput = document.getElementById("keyword");
+
+    const API_URL = "/api/news-report";
+
+    document.getElementById("exampleChips").addEventListener("click", (e) => {
+      const chip = e.target.closest(".chip");
+      if (!chip) return;
+      keywordInput.value = chip.dataset.keyword;
+      keywordInput.focus();
+    });
+
+    function showAlert(message, type) {
+      alertBox.textContent = message;
+      alertBox.className = `alert ${type}`;
+    }
+
+    function hideAlert() {
+      alertBox.className = "alert";
+      alertBox.textContent = "";
+    }
+
+    function setLoading(loading) {
+      submitBtn.disabled = loading;
+      submitBtn.classList.toggle("loading", loading);
+      submitBtn.querySelector(".btn-text").textContent = loading
+        ? "보고서 생성 중… (30초~1분 소요)"
+        : "보고서 생성 및 이메일 발송";
+    }
+
+    function escapeHtml(str) {
+      const div = document.createElement("div");
+      div.textContent = str;
+      return div.innerHTML;
+    }
+
+    function renderReport(data) {
+      const { report, sources } = data;
+
+      document.getElementById("reportTitle").textContent =
+        report.title || `"${keywordInput.value}" 주간 이슈 보고서`;
+      document.getElementById("reportDate").textContent =
+        `생성일: ${new Date().toLocaleDateString("ko-KR")}`;
+      document.getElementById("reportSummary").textContent = report.summary || "";
+      document.getElementById("reportTrend").textContent = report.trend || "";
+      document.getElementById("reportConclusion").textContent = report.conclusion || "";
+
+      const issuesList = document.getElementById("issuesList");
+      issuesList.innerHTML = (report.issues || [])
+        .map(
+          (issue, i) => `
+          <div class="issue-item">
+            <div class="issue-num">이슈 ${i + 1}</div>
+            <div class="issue-title">${escapeHtml(issue.title)}</div>
+            <p class="issue-desc">${escapeHtml(issue.description)}</p>
+            ${
+              issue.url
+                ? `<div class="issue-source"><a href="${escapeHtml(issue.url)}" target="_blank" rel="noopener">${escapeHtml(issue.source || issue.url)}</a></div>`
+                : ""
+            }
+          </div>`
+        )
+        .join("");
+
+      const sourcesBlock = document.getElementById("sourcesBlock");
+      const sourcesList = document.getElementById("sourcesList");
+
+      if (sources && sources.length > 0) {
+        sourcesBlock.style.display = "block";
+        sourcesList.innerHTML = sources
+          .map(
+            (s) =>
+              `<li><a href="${escapeHtml(s.url)}" target="_blank" rel="noopener">${escapeHtml(s.title)}</a></li>`
+          )
+          .join("");
+      } else {
+        sourcesBlock.style.display = "none";
+      }
+
+      reportSection.classList.add("visible");
+      reportSection.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      hideAlert();
+
+      const keyword = keywordInput.value.trim();
+      const email = document.getElementById("email").value.trim();
+
+      if (!keyword || !email) return;
+
+      setLoading(true);
+
+      try {
+        const res = await fetch(API_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ keyword, email }),
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+          throw new Error(data.error || "요청 처리 중 오류가 발생했습니다.");
+        }
+
+        renderReport(data);
+
+        if (data.email?.sent) {
+          showAlert(`${email}로 보고서가 성공적으로 발송되었습니다.`, "success");
+        } else {
+          showAlert(
+            `보고서가 생성되었습니다. 이메일 발송은 건너뛰었습니다: ${data.email?.reason || "설정 필요"}`,
+            "success"
+          );
+        }
+      } catch (err) {
+        showAlert(err.message, "error");
+      } finally {
+        setLoading(false);
+      }
+    });
+  </script>
+</body>
+</html>
