@@ -1397,7 +1397,7 @@
       balls: [],
       mixing: false,
       mixPower: 0,
-      drumAngle: 0,
+      mixTime: 0,
       camAngle: 0.55,
       animId: null,
       tickCount: 0,
@@ -1655,7 +1655,7 @@
     function initDrumPhysics(numbers) {
       stopDrumLoop();
       const { boundaryR, ballR, scene } = drumPhysics;
-      drumPhysics.drumAngle = 0;
+      drumPhysics.mixTime = 0;
 
       drumPhysics.balls.forEach(disposeBallMesh);
 
@@ -1767,18 +1767,11 @@
     }
 
     function renderDrumFrame() {
-      const { scene, camera, renderer, mixPower } = drumPhysics;
+      const { scene, camera, renderer } = drumPhysics;
       if (!renderer) return;
 
-      if (mixPower > 0) {
-        drumPhysics.camAngle += 0.0032 * mixPower;
-      }
-      const camR = 2.75;
-      const camY = 0.22 + Math.sin(drumPhysics.camAngle * 0.45) * 0.1;
-      camera.position.x = Math.sin(drumPhysics.camAngle) * camR;
-      camera.position.z = Math.cos(drumPhysics.camAngle) * camR;
-      camera.position.y = camY;
-      camera.lookAt(0, -0.08, 0);
+      camera.position.set(0.15, 0.35, 2.75);
+      camera.lookAt(0, -0.05, 0);
 
       syncBallMeshes();
       renderer.render(scene, camera);
@@ -1814,6 +1807,13 @@
       };
     }
 
+    function dampWallTangent(ball, nx, ny, nz, factor = 0.62) {
+      const vn = ball.vx * nx + ball.vy * ny + ball.vz * nz;
+      ball.vx -= (ball.vx - vn * nx) * factor;
+      ball.vy -= (ball.vy - vn * ny) * factor;
+      ball.vz -= (ball.vz - vn * nz) * factor;
+    }
+
     function resolveWall(ball, boundaryR, restitution) {
       const dist = Math.hypot(ball.x, ball.y, ball.z);
       const maxDist = boundaryR - ball.r;
@@ -1832,6 +1832,7 @@
         ball.vx = bounced.vx;
         ball.vy = bounced.vy;
         ball.vz = bounced.vz;
+        dampWallTangent(ball, nx, ny, nz);
         return bounced.energy;
       }
 
@@ -1926,28 +1927,26 @@
 
     function runMixingPhysicsSubstep(inDrumBalls, mixPower) {
       const { boundaryR } = drumPhysics;
-      const wallRestitution = 0.78;
-      const ballRestitution = 0.74;
-      const friction = 0.996;
-      const maxSpeed = 0.195;
+      const wallRestitution = 0.72;
+      const ballRestitution = 0.68;
+      const friction = 0.992;
+      const maxSpeed = 0.54 * (VISUAL_SPEED / 0.32);
       const dt = SUBSTEP_DT;
       let bounceEnergy = 0;
 
-      drumPhysics.drumAngle += 0.034 * mixPower * STEP_SCALE;
-      const gStrength = (0.011 + mixPower * 0.0052) * STEP_SCALE;
-      const a1 = drumPhysics.drumAngle;
-      const a2 = drumPhysics.drumAngle * 1.65 + 0.8;
-      const gx = Math.sin(a1) * gStrength * 0.9;
-      const gy = Math.cos(a1) * gStrength * 1.15;
-      const gz = Math.cos(a2) * gStrength * 0.72;
+      drumPhysics.mixTime += STEP_SCALE;
+      const gStrength = (0.014 + mixPower * 0.006) * STEP_SCALE;
+      const shake = gStrength * 0.28;
+      const tiltX = Math.sin(drumPhysics.mixTime * 2.4) * shake;
+      const tiltZ = Math.cos(drumPhysics.mixTime * 1.9) * shake;
 
       inDrumBalls.forEach((ball) => {
-        ball.vx += gx;
-        ball.vy += gy;
-        ball.vz += gz;
+        ball.vy -= gStrength * 1.35;
+        ball.vx += tiltX;
+        ball.vz += tiltZ;
 
-        if (ball.y < -0.4 && gy > 0 && Math.random() < 0.0018 * mixPower) {
-          ball.vy += mixPower * 0.004 * STEP_SCALE;
+        if (ball.y < -0.42 && Math.random() < 0.0022 * mixPower) {
+          ball.vy += mixPower * 0.0055 * STEP_SCALE;
         }
       });
 
