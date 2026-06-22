@@ -193,6 +193,9 @@
 
     .draw-column {
       min-width: 0;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
     }
 
     .saju-column {
@@ -210,7 +213,6 @@
       flex-direction: column;
       flex: 1;
       min-height: 0;
-      max-height: 640px;
       overflow: hidden;
     }
 
@@ -240,6 +242,12 @@
         padding-top: 24px;
         border-top: 1px solid var(--hairline);
         max-height: 520px;
+        flex: none;
+      }
+
+      .draw-column .controls {
+        margin-top: 16px;
+        padding-top: 0;
       }
     }
 
@@ -265,6 +273,7 @@
       gap: 0;
       margin-bottom: 20px;
       padding: 16px 0 8px;
+      flex-shrink: 0;
     }
 
     .machine-stand {
@@ -535,6 +544,7 @@
 
     .result-rack-wrap {
       margin-top: 12px;
+      flex-shrink: 0;
     }
 
     .result-rack {
@@ -625,6 +635,7 @@
       color: var(--mute);
       margin-top: 10px;
       letter-spacing: 0.06em;
+      flex-shrink: 0;
     }
 
     .ball {
@@ -645,6 +656,9 @@
       flex-wrap: wrap;
       gap: 8px;
       justify-content: center;
+      flex-shrink: 0;
+      margin-top: auto;
+      padding-top: 16px;
     }
 
     button {
@@ -696,10 +710,11 @@
       align-items: center;
       justify-content: center;
       gap: 8px;
-      margin-top: 16px;
+      margin-top: 12px;
       color: var(--mute);
       font-size: 15px;
       line-height: 1.67;
+      flex-shrink: 0;
     }
 
     .options label {
@@ -1058,6 +1073,7 @@
       padding: 12px;
       border-top: 1px solid var(--hairline);
       background: var(--canvas);
+      flex-shrink: 0;
     }
 
     .chat-input-row input[type="text"] {
@@ -1082,13 +1098,17 @@
       gap: 8px;
       margin-top: 12px;
       flex-shrink: 0;
+      min-height: 44px;
+      align-items: center;
     }
 
     .saju-note {
-      margin-top: 12px;
+      margin-top: 0;
+      margin-bottom: 12px;
       font-size: 12px;
       line-height: 1.5;
       color: var(--mute);
+      flex-shrink: 0;
     }
 
     .footer-section {
@@ -1151,10 +1171,6 @@
 
       .machine-stand {
         max-width: 400px;
-      }
-
-      .saju-section {
-        max-height: 680px;
       }
 
       .result-rack {
