@@ -239,12 +239,19 @@
       75% { transform: translate(2px, 1px) rotate(0.6deg); }
     }
 
-    #drumCanvas {
+    #drumViewport {
       display: block;
       width: 100%;
       height: 100%;
       border-radius: 50%;
+      overflow: hidden;
       background: radial-gradient(circle at 50% 55%, #fafafa 0%, #e8eef2 55%, #d0dce4 100%);
+    }
+
+    #drumViewport canvas {
+      display: block;
+      width: 100% !important;
+      height: 100% !important;
     }
 
     .globe-frame {
@@ -632,8 +639,8 @@
 
     .options input[type="number"],
     .winners-toolbar input[type="search"] {
-      width: 52px;
-      padding: 12px 16px;
+      width: 64px;
+      padding: 10px 8px;
       border-radius: var(--radius-sm);
       border: 1px solid var(--hairline);
       background: var(--canvas);
@@ -643,6 +650,14 @@
       line-height: 1.5;
       text-align: center;
       min-height: 44px;
+      -moz-appearance: textfield;
+      appearance: textfield;
+    }
+
+    .options input[type="number"]::-webkit-outer-spin-button,
+    .options input[type="number"]::-webkit-inner-spin-button {
+      -webkit-appearance: none;
+      margin: 0;
     }
 
     .winners-toolbar input[type="search"] {
@@ -815,6 +830,183 @@
       display: none;
     }
 
+    .saju-profile {
+      display: grid;
+      gap: 12px;
+      margin-bottom: 16px;
+      padding: 16px;
+      background: var(--surface-soft);
+      border: 1px solid var(--hairline);
+      border-radius: var(--radius-sm);
+    }
+
+    .saju-profile-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: center;
+    }
+
+    .saju-profile-row label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 15px;
+      color: var(--body);
+      cursor: pointer;
+    }
+
+    .saju-profile-row input[type="date"] {
+      padding: 10px 12px;
+      border: 1px solid var(--hairline);
+      border-radius: var(--radius-sm);
+      font-family: inherit;
+      font-size: 15px;
+      min-height: 44px;
+      background: var(--canvas);
+    }
+
+    .saju-profile-row input[type="date"]:focus {
+      outline: none;
+      border: 2px solid var(--primary);
+    }
+
+    .saju-gender-group {
+      display: flex;
+      gap: 8px;
+    }
+
+    .saju-gender-group label {
+      padding: 10px 14px;
+      border: 1px solid var(--hairline);
+      border-radius: var(--radius-sm);
+      background: var(--canvas);
+      min-height: 44px;
+    }
+
+    .saju-gender-group input {
+      accent-color: var(--primary);
+    }
+
+    .chat-shell {
+      border: 1px solid var(--hairline);
+      border-radius: var(--radius-sm);
+      background: var(--surface-soft);
+      overflow: hidden;
+    }
+
+    .chat-messages {
+      min-height: 320px;
+      max-height: 420px;
+      overflow-y: auto;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .chat-msg {
+      max-width: 92%;
+      padding: 12px 14px;
+      border-radius: var(--radius-sm);
+      font-size: 15px;
+      line-height: 1.6;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .chat-msg.bot {
+      align-self: flex-start;
+      background: var(--canvas);
+      border: 1px solid var(--hairline);
+      color: var(--body);
+    }
+
+    .chat-msg.user {
+      align-self: flex-end;
+      background: var(--ink);
+      color: var(--on-dark);
+    }
+
+    .chat-msg.error {
+      align-self: flex-start;
+      background: #fff5f5;
+      border: 1px solid #f1c0c0;
+      color: #8a1f1f;
+    }
+
+    .chat-msg.loading {
+      color: var(--mute);
+      font-style: italic;
+    }
+
+    .chat-lotto-balls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 10px;
+    }
+
+    .chat-reason-list {
+      margin-top: 10px;
+      padding-left: 18px;
+      color: var(--mute);
+      font-size: 14px;
+    }
+
+    .chat-reason-list li {
+      margin-bottom: 4px;
+    }
+
+    .chat-saju-tag {
+      display: inline-block;
+      margin-top: 8px;
+      padding: 4px 8px;
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--primary-dark);
+      background: rgba(118, 185, 0, 0.12);
+      border-radius: var(--radius-sm);
+    }
+
+    .chat-input-row {
+      display: flex;
+      gap: 8px;
+      padding: 12px;
+      border-top: 1px solid var(--hairline);
+      background: var(--canvas);
+    }
+
+    .chat-input-row input[type="text"] {
+      flex: 1;
+      min-width: 0;
+      padding: 12px 14px;
+      border: 1px solid var(--hairline);
+      border-radius: var(--radius-sm);
+      font-family: inherit;
+      font-size: 15px;
+      min-height: 44px;
+    }
+
+    .chat-input-row input[type="text"]:focus {
+      outline: none;
+      border: 2px solid var(--primary);
+    }
+
+    .chat-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    .saju-note {
+      margin-top: 12px;
+      font-size: 12px;
+      line-height: 1.5;
+      color: var(--mute);
+    }
+
     .footer-section {
       background: var(--surface-dark);
       color: var(--on-dark-mute);
@@ -870,6 +1062,7 @@
   <nav class="sub-nav" role="tablist">
     <div class="sub-nav-inner">
       <button type="button" class="tab-btn active" id="tabDraw" role="tab" aria-selected="true">번호 추첨</button>
+      <button type="button" class="tab-btn" id="tabSaju" role="tab" aria-selected="false">사주 추천</button>
       <button type="button" class="tab-btn" id="tabWinners" role="tab" aria-selected="false">역대 1등</button>
     </div>
   </nav>
@@ -885,7 +1078,7 @@
             <div class="machine-stand">
               <div class="stand-neck" aria-hidden="true"></div>
               <div class="globe-housing" id="globeHousing">
-                <canvas id="drumCanvas" width="300" height="300" aria-label="로또 추첨기 구체"></canvas>
+                <div id="drumViewport" aria-label="로또 추첨기 구체"></div>
                 <div class="globe-cap" aria-hidden="true"></div>
                 <div class="globe-frame" aria-hidden="true"></div>
               </div>
@@ -933,6 +1126,40 @@
       </section>
     </div>
 
+    <div class="panel" id="panelSaju" role="tabpanel">
+      <section class="card">
+        <span class="corner-square" aria-hidden="true"></span>
+        <h2 class="card-title">사주 로또 상담</h2>
+        <p class="saju-note">성별과 생년월일을 입력하면 사주(년·월·일주)를 바탕으로 로또 번호를 추천하고, 사주 관점에서 이유를 설명합니다. AI API 키는 Vercel 환경 변수에 저장됩니다.</p>
+
+        <form class="saju-profile" id="sajuProfileForm">
+          <div class="saju-profile-row">
+            <span>성별</span>
+            <div class="saju-gender-group">
+              <label><input type="radio" name="sajuGender" value="male" checked /> 남성</label>
+              <label><input type="radio" name="sajuGender" value="female" /> 여성</label>
+            </div>
+          </div>
+          <div class="saju-profile-row">
+            <label for="sajuBirthDate">생년월일</label>
+            <input type="date" id="sajuBirthDate" required />
+          </div>
+        </form>
+
+        <div class="chat-shell">
+          <div class="chat-messages" id="chatMessages" aria-live="polite"></div>
+          <div class="chat-input-row">
+            <input type="text" id="chatInput" placeholder="추가 질문 (예: 이번 주 재물운 번호)" maxlength="200" />
+            <button type="button" class="btn-primary" id="chatSendBtn">추천 받기</button>
+          </div>
+        </div>
+
+        <div class="chat-actions">
+          <button type="button" class="btn-outline" id="chatResetBtn">대화 초기화</button>
+        </div>
+      </section>
+    </div>
+
     <div class="panel" id="panelWinners" role="tabpanel">
       <section class="card">
         <span class="corner-square" aria-hidden="true"></span>
@@ -953,13 +1180,14 @@
   <footer class="footer-section">한국 로또 6/45 · 데이터: smok95/lotto (동행복권 공개 정보 기반, 1~1229회)</footer>
 
   <script src="winners-data.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
   <script>
     const MIN = 1;
     const MAX = 45;
     const COUNT = 6;
 
     const drawStatus = document.getElementById("drawStatus");
-    const drumCanvas = document.getElementById("drumCanvas");
+    const drumViewport = document.getElementById("drumViewport");
     const globeHousing = document.getElementById("globeHousing");
     const chuteBall = document.getElementById("chuteBall");
     const ballCountLabel = document.getElementById("ballCountLabel");
@@ -983,20 +1211,25 @@
       5: ["#c8e6c9", "#66bb6a", "#2e7d32"],
     };
 
+    const VISUAL_SPEED = 0.32;
+
     const drumPhysics = {
-      ctx: null,
-      size: 300,
-      cx: 150,
-      cy: 150,
-      boundaryR: 128,
-      ballR: 12,
+      scene: null,
+      camera: null,
+      renderer: null,
+      globe: null,
+      viewport: null,
+      boundaryR: 1.08,
+      ballR: 0.082,
       balls: [],
       mixing: false,
       mixPower: 0,
       drumAngle: 0,
+      camAngle: 0.55,
       animId: null,
       tickCount: 0,
       lastBounceSound: 0,
+      gravity: 0.014,
     };
 
     function setMixingUI(active) {
@@ -1075,277 +1308,347 @@
       return { main, bonus, sorted: [...main].sort((a, b) => a - b) };
     }
 
+    function disposeBallMesh(ball) {
+      if (!ball.mesh) return;
+      drumPhysics.scene.remove(ball.mesh);
+      ball.mesh.geometry.dispose();
+      if (ball.mesh.material.map) ball.mesh.material.map.dispose();
+      ball.mesh.material.dispose();
+      ball.mesh = null;
+    }
+
+    function createBallMesh(num) {
+      const zone = getZone(num);
+      const colors = BALL_COLORS[zone];
+      const size = 256;
+      const canvas = document.createElement("canvas");
+      canvas.width = size;
+      canvas.height = size;
+      const ctx = canvas.getContext("2d");
+      const cx = size / 2;
+      const cy = size / 2;
+
+      const g = ctx.createRadialGradient(cx - size * 0.12, cy - size * 0.14, size * 0.04, cx, cy, size * 0.74);
+      g.addColorStop(0, colors[0]);
+      g.addColorStop(0.55, colors[1]);
+      g.addColorStop(1, colors[2]);
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, size, size);
+
+      const fontSize = num >= 10 ? size * 0.27 : size * 0.31;
+      const textColor = zone === 1 || zone === 5 ? "#111" : "#fff";
+      ctx.font = `700 ${fontSize}px Inter, Arial, sans-serif`;
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      if (zone !== 1 && zone !== 5) {
+        ctx.shadowColor = "rgba(0, 0, 0, 0.3)";
+        ctx.shadowBlur = 3;
+        ctx.shadowOffsetY = 1;
+      }
+      ctx.fillStyle = textColor;
+      ctx.fillText(String(num), cx, cy + 1);
+      ctx.shadowColor = "transparent";
+
+      const texture = new THREE.CanvasTexture(canvas);
+      texture.anisotropy = 4;
+      texture.colorSpace = THREE.SRGBColorSpace;
+      const geometry = new THREE.SphereGeometry(drumPhysics.ballR, 22, 22);
+      const material = new THREE.MeshStandardMaterial({
+        map: texture,
+        color: 0xffffff,
+        emissive: new THREE.Color(colors[1]),
+        emissiveIntensity: 0.14,
+        roughness: 0.38,
+        metalness: 0.06,
+      });
+      const mesh = new THREE.Mesh(geometry, material);
+      drumPhysics.scene.add(mesh);
+      return mesh;
+    }
+
+    function syncBallMeshes() {
+      drumPhysics.balls.forEach((ball) => {
+        if (!ball.mesh) return;
+        if (!ball.inDrum && !ball.exiting) {
+          ball.mesh.visible = false;
+          return;
+        }
+        ball.mesh.visible = true;
+        ball.mesh.position.set(ball.x, ball.y, ball.z);
+        ball.mesh.material.opacity = ball.opacity;
+        ball.mesh.material.transparent = ball.opacity < 1;
+      });
+    }
+
     function initDrumPhysics(numbers) {
       stopDrumLoop();
-      const { cx, cy, boundaryR, ballR } = drumPhysics;
+      const { boundaryR, ballR, scene } = drumPhysics;
       drumPhysics.drumAngle = 0;
-      const golden = Math.PI * (3 - Math.sqrt(5));
+
+      drumPhysics.balls.forEach(disposeBallMesh);
+
+      const bottomY = -boundaryR + ballR + 0.04;
+      const cols = Math.ceil(Math.sqrt(numbers.length * 1.35));
       drumPhysics.balls = numbers.map((num, i) => {
-        const t = (i + 0.5) / numbers.length;
-        const angle = i * golden;
-        const dist = Math.sqrt(t) * (boundaryR - ballR - 10);
-        const angleJitter = (Math.random() - 0.5) * 0.35;
+        const row = Math.floor(i / cols);
+        const col = i % cols;
+        const rowCount = Math.min(cols, numbers.length - row * cols);
+        const offsetX = (col - (rowCount - 1) / 2) * (ballR * 2.05);
+        const offsetZ = (row % 2) * ballR * 0.55;
+        const offsetY = row * (ballR * 1.75);
+        const mesh = createBallMesh(num);
         return {
           num,
-          x: cx + Math.cos(angle + angleJitter) * dist,
-          y: cy + Math.sin(angle + angleJitter) * dist,
-          vx: (Math.random() - 0.5) * 3.5,
-          vy: (Math.random() - 0.5) * 3.5,
+          x: offsetX + (Math.random() - 0.5) * 0.02,
+          y: bottomY + offsetY + Math.random() * 0.01,
+          z: offsetZ + (Math.random() - 0.5) * 0.02,
+          vx: 0,
+          vy: 0,
+          vz: 0,
           r: ballR,
+          mesh,
           inDrum: true,
           exiting: false,
           opacity: 1,
         };
       });
+
+      settleDrumBalls(220);
+      syncBallMeshes();
       updateBallCountLabel();
       renderDrumFrame();
+    }
+
+    function settleDrumBalls(steps) {
+      const inDrumBalls = drumPhysics.balls.filter((b) => b.inDrum);
+      for (let i = 0; i < steps; i++) {
+        runIdlePhysicsSubstep(inDrumBalls, 5);
+      }
+      inDrumBalls.forEach((ball) => {
+        ball.vx = 0;
+        ball.vy = 0;
+        ball.vz = 0;
+      });
     }
 
     function resetAllDrumBalls() {
       initDrumPhysics(Array.from({ length: MAX - MIN + 1 }, (_, i) => i + MIN));
     }
 
-    function getBallGradient(ctx, zone, x, y, r) {
-      const colors = BALL_COLORS[zone];
-      const g = ctx.createRadialGradient(x - r * 0.35, y - r * 0.35, r * 0.1, x, y, r);
-      g.addColorStop(0, colors[0]);
-      g.addColorStop(0.55, colors[1]);
-      g.addColorStop(1, colors[2]);
-      return g;
-    }
-
     function renderDrumFrame() {
-      const { ctx, size, cx, cy, boundaryR, balls } = drumPhysics;
-      if (!ctx) return;
+      const { scene, camera, renderer, mixPower } = drumPhysics;
+      if (!renderer) return;
 
-      ctx.clearRect(0, 0, size, size);
+      if (mixPower > 0) {
+        drumPhysics.camAngle += 0.0032 * mixPower;
+      }
+      const camR = 2.75;
+      const camY = 0.22 + Math.sin(drumPhysics.camAngle * 0.45) * 0.1;
+      camera.position.x = Math.sin(drumPhysics.camAngle) * camR;
+      camera.position.z = Math.cos(drumPhysics.camAngle) * camR;
+      camera.position.y = camY;
+      camera.lookAt(0, -0.08, 0);
 
-      const bg = ctx.createRadialGradient(cx, cy, boundaryR * 0.2, cx, cy, boundaryR);
-      bg.addColorStop(0, "#fafafa");
-      bg.addColorStop(0.7, "#eef3f6");
-      bg.addColorStop(1, "#d8e2ea");
-      ctx.fillStyle = bg;
-      ctx.beginPath();
-      ctx.arc(cx, cy, boundaryR, 0, Math.PI * 2);
-      ctx.fill();
-
-      ctx.save();
-      ctx.beginPath();
-      ctx.arc(cx, cy, boundaryR - 1, 0, Math.PI * 2);
-      ctx.clip();
-
-      const sorted = [...balls].sort((a, b) => a.y - b.y);
-      sorted.forEach((ball) => {
-        if (!ball.inDrum && !ball.exiting) return;
-        ctx.save();
-        ctx.globalAlpha = ball.opacity;
-        const zone = getZone(ball.num);
-        ctx.fillStyle = getBallGradient(ctx, zone, ball.x, ball.y, ball.r);
-        ctx.beginPath();
-        ctx.arc(ball.x, ball.y, ball.r, 0, Math.PI * 2);
-        ctx.fill();
-
-        ctx.fillStyle = zone === 1 || zone === 5 ? "#111" : "#fff";
-        ctx.font = `700 ${ball.r * 0.95}px Inter, Arial, sans-serif`;
-        ctx.textAlign = "center";
-        ctx.textBaseline = "middle";
-        ctx.fillText(String(ball.num), ball.x, ball.y + 0.5);
-        ctx.restore();
-      });
-
-      ctx.restore();
+      syncBallMeshes();
+      renderer.render(scene, camera);
     }
 
     function clampSpeed(ball, maxSpeed) {
-      const speed = Math.hypot(ball.vx, ball.vy);
+      const speed = Math.hypot(ball.vx, ball.vy, ball.vz);
       if (speed > maxSpeed) {
         ball.vx = (ball.vx / speed) * maxSpeed;
         ball.vy = (ball.vy / speed) * maxSpeed;
+        ball.vz = (ball.vz / speed) * maxSpeed;
       }
     }
 
-    function resolveWall(ball, cx, cy, boundaryR, restitution) {
-      const dx = ball.x - cx;
-      const dy = ball.y - cy;
-      const dist = Math.hypot(dx, dy);
+    function resolveWall(ball, boundaryR, restitution) {
+      const dist = Math.hypot(ball.x, ball.y, ball.z);
       const maxDist = boundaryR - ball.r;
       if (dist <= maxDist || dist === 0) return 0;
 
-      const nx = dx / dist;
-      const ny = dy / dist;
-      ball.x = cx + nx * maxDist;
-      ball.y = cy + ny * maxDist;
+      const nx = ball.x / dist;
+      const ny = ball.y / dist;
+      const nz = ball.z / dist;
+      ball.x = nx * maxDist;
+      ball.y = ny * maxDist;
+      ball.z = nz * maxDist;
 
-      const dot = ball.vx * nx + ball.vy * ny;
+      const dot = ball.vx * nx + ball.vy * ny + ball.vz * nz;
       if (dot > 0) {
         ball.vx = (ball.vx - 2 * dot * nx) * restitution;
         ball.vy = (ball.vy - 2 * dot * ny) * restitution;
+        ball.vz = (ball.vz - 2 * dot * nz) * restitution;
         return Math.abs(dot);
       }
       return 0;
     }
 
     function resolveBallPair(a, b, restitution) {
-      const dx = b.x - a.x;
-      const dy = b.y - a.y;
-      const dist = Math.hypot(dx, dy);
+      let dx = b.x - a.x;
+      let dy = b.y - a.y;
+      let dz = b.z - a.z;
+      let dist = Math.hypot(dx, dy, dz);
       const minDist = a.r + b.r;
-      if (dist === 0 || dist >= minDist) return 0;
+
+      if (dist === 0) {
+        const angle = Math.random() * Math.PI * 2;
+        dx = Math.cos(angle);
+        dy = Math.random() - 0.5;
+        dz = Math.sin(angle);
+        dist = 0.001;
+      }
+
+      if (dist >= minDist) return 0;
 
       const nx = dx / dist;
       const ny = dy / dist;
+      const nz = dz / dist;
       const overlap = minDist - dist;
-      a.x -= nx * overlap * 0.55;
-      a.y -= ny * overlap * 0.55;
-      b.x += nx * overlap * 0.55;
-      b.y += ny * overlap * 0.55;
+      const half = overlap * 0.5;
+      a.x -= nx * half;
+      a.y -= ny * half;
+      a.z -= nz * half;
+      b.x += nx * half;
+      b.y += ny * half;
+      b.z += nz * half;
 
       const dvx = a.vx - b.vx;
       const dvy = a.vy - b.vy;
-      const impact = dvx * nx + dvy * ny;
+      const dvz = a.vz - b.vz;
+      const impact = dvx * nx + dvy * ny + dvz * nz;
       if (impact <= 0) return 0;
 
       const impulse = impact * restitution;
       a.vx -= impulse * nx;
       a.vy -= impulse * ny;
+      a.vz -= impulse * nz;
       b.vx += impulse * nx;
       b.vy += impulse * ny;
+      b.vz += impulse * nz;
       return Math.abs(impact);
     }
 
-    function applyDistributionForces(balls, cx, cy, boundaryR, mixPower) {
-      if (balls.length === 0 || mixPower <= 0) return;
-
-      const quadrants = [0, 0, 0, 0];
-      let sumX = 0;
-      let sumY = 0;
-
-      balls.forEach((ball) => {
-        sumX += ball.x;
-        sumY += ball.y;
-        const qx = ball.x >= cx ? 1 : 0;
-        const qy = ball.y >= cy ? 1 : 0;
-        quadrants[qx + qy * 2] += 1;
-      });
-
-      const target = balls.length / 4;
-      const driftX = sumX / balls.length - cx;
-      const driftY = sumY / balls.length - cy;
-
-      balls.forEach((ball) => {
-        const qx = ball.x >= cx ? 1 : 0;
-        const qy = ball.y >= cy ? 1 : 0;
-        const qIndex = qx + qy * 2;
-        const overcrowd = quadrants[qIndex] - target;
-
-        if (overcrowd > 1.5) {
-          ball.vx += (qx ? -1 : 1) * overcrowd * 0.018 * mixPower;
-          ball.vy += (qy ? -1 : 1) * overcrowd * 0.018 * mixPower;
-        }
-
-        ball.vx -= driftX * 0.016 * mixPower;
-        ball.vy -= driftY * 0.016 * mixPower;
-
-        const nx = (ball.x - cx) / boundaryR;
-        const ny = (ball.y - cy) / boundaryR;
-
-        if (ny > 0.25) ball.vy -= mixPower * 0.035 * (ny - 0.15);
-        if (ny < -0.25) ball.vy += mixPower * 0.035 * (-ny - 0.15);
-        if (nx > 0.25) ball.vx -= mixPower * 0.035 * (nx - 0.15);
-        if (nx < -0.25) ball.vx += mixPower * 0.035 * (-nx - 0.15);
-      });
-    }
-
-    function physicsSubstep(inDrumBalls, mixPower) {
-      const { cx, cy, boundaryR } = drumPhysics;
-      const wallRestitution = mixPower > 0 ? 0.9 : 0.75;
-      const ballRestitution = mixPower > 0 ? 0.92 : 0.82;
-      const friction = mixPower > 0 ? 0.997 : 0.992;
-      const maxSpeed = mixPower > 0 ? 10 : 5;
+    function resolveAllCollisions(inDrumBalls, boundaryR, wallRestitution, ballRestitution, passes) {
       let bounceEnergy = 0;
-
-      if (mixPower > 0) {
-        drumPhysics.drumAngle += 0.03 * mixPower;
-        const gBase = 0.16 + mixPower * 0.028;
-        const a1 = drumPhysics.drumAngle;
-        const a2 = drumPhysics.drumAngle * 1.65 + 0.8;
-        const gx = (Math.sin(a1) + Math.sin(a2) * 0.45) * gBase;
-        const gy = (Math.cos(a1) + Math.cos(a2) * 0.45) * gBase;
-
-        inDrumBalls.forEach((ball) => {
-          ball.vx += gx * 0.2;
-          ball.vy += gy * 0.2;
-
-          if (Math.random() < 0.04 * mixPower) {
-            const jitterAngle = Math.random() * Math.PI * 2;
-            const jitterForce = mixPower * (1 + Math.random());
-            ball.vx += Math.cos(jitterAngle) * jitterForce;
-            ball.vy += Math.sin(jitterAngle) * jitterForce;
-          }
-        });
-
-        applyDistributionForces(inDrumBalls, cx, cy, boundaryR, mixPower);
-
-        if (drumPhysics.tickCount % 12 === 0) {
-          const kickCount = 3 + Math.floor(Math.random() * 3);
-          for (let k = 0; k < kickCount; k++) {
-            const ball = inDrumBalls[Math.floor(Math.random() * inDrumBalls.length)];
-            if (!ball) continue;
-            const kickAngle = Math.random() * Math.PI * 2;
-            const kickForce = mixPower * (1.2 + Math.random());
-            ball.vx += Math.cos(kickAngle) * kickForce;
-            ball.vy += Math.sin(kickAngle) * kickForce;
-          }
-        }
-      } else {
-        applyDistributionForces(inDrumBalls, cx, cy, boundaryR, 0.6);
-      }
-
-      inDrumBalls.forEach((ball) => {
-        ball.vx *= friction;
-        ball.vy *= friction;
-        ball.x += ball.vx * 0.42;
-        ball.y += ball.vy * 0.42;
-        clampSpeed(ball, maxSpeed);
-        bounceEnergy += resolveWall(ball, cx, cy, boundaryR, wallRestitution);
-      });
-
-      for (let pass = 0; pass < 2; pass++) {
+      for (let pass = 0; pass < passes; pass++) {
         for (let i = 0; i < inDrumBalls.length; i++) {
           for (let j = i + 1; j < inDrumBalls.length; j++) {
             bounceEnergy += resolveBallPair(inDrumBalls[i], inDrumBalls[j], ballRestitution);
           }
         }
         inDrumBalls.forEach((ball) => {
-          bounceEnergy += resolveWall(ball, cx, cy, boundaryR, wallRestitution);
+          bounceEnergy += resolveWall(ball, boundaryR, wallRestitution);
         });
       }
-
       return bounceEnergy;
+    }
+
+    function runIdlePhysicsSubstep(inDrumBalls, collisionPasses) {
+      const { boundaryR, gravity } = drumPhysics;
+      const wallRestitution = 0.52;
+      const ballRestitution = 0.48;
+      const friction = 0.982;
+      const maxSpeed = 0.26;
+      const dt = 0.36 * VISUAL_SPEED;
+
+      inDrumBalls.forEach((ball) => {
+        ball.vy -= gravity;
+        ball.vx *= friction;
+        ball.vy *= friction;
+        ball.vz *= friction;
+        ball.x += ball.vx * dt;
+        ball.y += ball.vy * dt;
+        ball.z += ball.vz * dt;
+        clampSpeed(ball, maxSpeed);
+      });
+
+      return resolveAllCollisions(inDrumBalls, boundaryR, wallRestitution, ballRestitution, collisionPasses);
+    }
+
+    function runMixingPhysicsSubstep(inDrumBalls, mixPower) {
+      const { boundaryR } = drumPhysics;
+      const wallRestitution = 0.92;
+      const ballRestitution = 0.91;
+      const friction = 0.998;
+      const maxSpeed = 0.54;
+      const dt = 0.34 * VISUAL_SPEED;
+      let bounceEnergy = 0;
+
+      drumPhysics.drumAngle += 0.034 * mixPower;
+      const gStrength = 0.011 + mixPower * 0.0052;
+      const a1 = drumPhysics.drumAngle;
+      const a2 = drumPhysics.drumAngle * 1.65 + 0.8;
+      const gx = Math.sin(a1) * gStrength * 0.9;
+      const gy = Math.cos(a1) * gStrength * 1.15;
+      const gz = Math.cos(a2) * gStrength * 0.72;
+
+      inDrumBalls.forEach((ball) => {
+        ball.vx += gx;
+        ball.vy += gy;
+        ball.vz += gz;
+
+        if (ball.y < -0.4 && gy > 0 && Math.random() < 0.004 * mixPower) {
+          ball.vy += mixPower * 0.006;
+        }
+
+        if (Math.random() < 0.005 * mixPower) {
+          const gust = Math.random() * Math.PI * 2;
+          const gustElev = (Math.random() - 0.15) * Math.PI * 0.55;
+          const gustForce = mixPower * (0.0016 + Math.random() * 0.002);
+          ball.vx += Math.cos(gust) * Math.cos(gustElev) * gustForce;
+          ball.vy += Math.sin(gustElev) * gustForce;
+          ball.vz += Math.sin(gust) * Math.cos(gustElev) * gustForce;
+        }
+      });
+
+      inDrumBalls.forEach((ball) => {
+        ball.vx *= friction;
+        ball.vy *= friction;
+        ball.vz *= friction;
+        ball.x += ball.vx * dt;
+        ball.y += ball.vy * dt;
+        ball.z += ball.vz * dt;
+        clampSpeed(ball, maxSpeed);
+      });
+
+      bounceEnergy += resolveAllCollisions(inDrumBalls, boundaryR, wallRestitution, ballRestitution, 4);
+      return bounceEnergy;
+    }
+
+    function physicsSubstep(inDrumBalls, mixPower) {
+      if (mixPower > 0) {
+        return runMixingPhysicsSubstep(inDrumBalls, mixPower);
+      }
+      return runIdlePhysicsSubstep(inDrumBalls, 3);
     }
 
     function stepDrumPhysics() {
       const { balls, mixPower } = drumPhysics;
       const inDrumBalls = balls.filter((b) => b.inDrum);
       let totalBounce = 0;
+      const substeps = mixPower > 0 ? 7 : 3;
 
-      for (let s = 0; s < 4; s++) {
+      for (let s = 0; s < substeps; s++) {
         totalBounce += physicsSubstep(inDrumBalls, mixPower);
       }
 
-      if (mixPower > 0 && totalBounce > 3 && drumPhysics.tickCount - drumPhysics.lastBounceSound > 6) {
+      if (mixPower > 0 && totalBounce > 0.12 && drumPhysics.tickCount - drumPhysics.lastBounceSound > 6) {
         playMixTick();
         drumPhysics.lastBounceSound = drumPhysics.tickCount;
       }
 
       balls.filter((b) => b.exiting).forEach((ball) => {
-        ball.x += ball.vx * 0.45;
-        ball.y += ball.vy * 0.45;
-        ball.vy += 0.4;
+        const dt = 0.45 * VISUAL_SPEED;
+        ball.x += ball.vx * dt;
+        ball.y += ball.vy * dt;
+        ball.z += ball.vz * dt;
+        ball.vy -= 0.012;
         ball.opacity -= 0.035;
         if (ball.opacity <= 0) {
           ball.exiting = false;
           ball.inDrum = false;
+          disposeBallMesh(ball);
         }
       });
 
@@ -1435,17 +1738,76 @@
       if (!ball) return;
       ball.inDrum = false;
       ball.exiting = true;
-      ball.vx = (Math.random() - 0.5) * 2.2;
-      ball.vy = 3 + Math.random() * 1.5;
+      ball.vx = (Math.random() - 0.5) * 0.09;
+      ball.vy = 0.06 + Math.random() * 0.05;
+      ball.vz = 0.12 + Math.random() * 0.06;
       updateBallCountLabel();
       startDrumLoop(0);
     }
 
+    function onDrumResize() {
+      const { viewport, camera, renderer } = drumPhysics;
+      if (!viewport || !renderer) return;
+      const width = viewport.clientWidth || 300;
+      const height = viewport.clientHeight || 300;
+      camera.aspect = width / height;
+      camera.updateProjectionMatrix();
+      renderer.setSize(width, height);
+      renderDrumFrame();
+    }
+
     function initCanvas() {
-      drumPhysics.ctx = drumCanvas.getContext("2d");
-      drumPhysics.size = drumCanvas.width;
-      drumPhysics.cx = drumPhysics.size / 2;
-      drumPhysics.cy = drumPhysics.size / 2;
+      const viewport = drumViewport;
+      const width = viewport.clientWidth || 300;
+      const height = viewport.clientHeight || 300;
+
+      const scene = new THREE.Scene();
+      const camera = new THREE.PerspectiveCamera(42, width / height, 0.1, 100);
+      camera.position.set(0.15, 0.35, 2.75);
+      camera.lookAt(0, -0.05, 0);
+
+      const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      renderer.setSize(width, height);
+      renderer.setClearColor(0x000000, 0);
+      renderer.outputColorSpace = THREE.SRGBColorSpace;
+      viewport.appendChild(renderer.domElement);
+
+      scene.add(new THREE.AmbientLight(0xffffff, 0.9));
+      const keyLight = new THREE.DirectionalLight(0xffffff, 1.15);
+      keyLight.position.set(2.5, 4, 3);
+      scene.add(keyLight);
+      const fillLight = new THREE.DirectionalLight(0xb8d4ff, 0.5);
+      fillLight.position.set(-3, 0.5, -2);
+      scene.add(fillLight);
+      const rimLight = new THREE.PointLight(0xffffff, 0.35);
+      rimLight.position.set(0, -1.5, 1.5);
+      scene.add(rimLight);
+
+      const globeGeom = new THREE.SphereGeometry(drumPhysics.boundaryR, 56, 56);
+      const globeMat = new THREE.MeshPhysicalMaterial({
+        color: 0xe8f0f8,
+        transparent: true,
+        opacity: 0.16,
+        roughness: 0.06,
+        metalness: 0.04,
+        transmission: 0.82,
+        thickness: 0.35,
+        clearcoat: 1,
+        clearcoatRoughness: 0.08,
+        side: THREE.DoubleSide,
+        depthWrite: false,
+      });
+      const globe = new THREE.Mesh(globeGeom, globeMat);
+      scene.add(globe);
+
+      drumPhysics.scene = scene;
+      drumPhysics.camera = camera;
+      drumPhysics.renderer = renderer;
+      drumPhysics.globe = globe;
+      drumPhysics.viewport = viewport;
+
+      window.addEventListener("resize", onDrumResize);
     }
 
     function buildResultRack() {
@@ -1663,8 +2025,10 @@
     });
 
     const tabDraw = document.getElementById("tabDraw");
+    const tabSaju = document.getElementById("tabSaju");
     const tabWinners = document.getElementById("tabWinners");
     const panelDraw = document.getElementById("panelDraw");
+    const panelSaju = document.getElementById("panelSaju");
     const panelWinners = document.getElementById("panelWinners");
     const winnerSearch = document.getElementById("winnerSearch");
     const winnerSearchBtn = document.getElementById("winnerSearchBtn");
@@ -1680,12 +2044,17 @@
 
     function switchTab(target) {
       const isDraw = target === "draw";
+      const isSaju = target === "saju";
+      const isWinners = target === "winners";
       tabDraw.classList.toggle("active", isDraw);
-      tabWinners.classList.toggle("active", !isDraw);
+      tabSaju.classList.toggle("active", isSaju);
+      tabWinners.classList.toggle("active", isWinners);
       tabDraw.setAttribute("aria-selected", String(isDraw));
-      tabWinners.setAttribute("aria-selected", String(!isDraw));
+      tabSaju.setAttribute("aria-selected", String(isSaju));
+      tabWinners.setAttribute("aria-selected", String(isWinners));
       panelDraw.classList.toggle("active", isDraw);
-      panelWinners.classList.toggle("active", !isDraw);
+      panelSaju.classList.toggle("active", isSaju);
+      panelWinners.classList.toggle("active", isWinners);
     }
 
     function formatPrize(amount) {
@@ -1797,7 +2166,151 @@
     }
 
     tabDraw.addEventListener("click", () => switchTab("draw"));
+    tabSaju.addEventListener("click", () => switchTab("saju"));
     tabWinners.addEventListener("click", () => switchTab("winners"));
+
+    const chatMessages = document.getElementById("chatMessages");
+    const chatInput = document.getElementById("chatInput");
+    const chatSendBtn = document.getElementById("chatSendBtn");
+    const chatResetBtn = document.getElementById("chatResetBtn");
+    const sajuBirthDate = document.getElementById("sajuBirthDate");
+    let sajuChatStarted = false;
+
+    function getSajuFormValues() {
+      const gender = document.querySelector('input[name="sajuGender"]:checked')?.value;
+      const birthDate = sajuBirthDate.value;
+      return { gender, birthDate };
+    }
+
+    function appendChatMessage(type, content, extraNode = null) {
+      const msg = document.createElement("div");
+      msg.className = `chat-msg ${type}`;
+      if (typeof content === "string") {
+        msg.textContent = content;
+      } else if (content) {
+        msg.appendChild(content);
+      }
+      if (extraNode) msg.appendChild(extraNode);
+      chatMessages.appendChild(msg);
+      chatMessages.scrollTop = chatMessages.scrollHeight;
+      return msg;
+    }
+
+    function buildRecommendationNode(recommendation, profile) {
+      const wrap = document.createElement("div");
+
+      if (profile) {
+        const tag = document.createElement("span");
+        tag.className = "chat-saju-tag";
+        tag.textContent = `년주 ${profile.pillars.year} · 월주 ${profile.pillars.month} · 일주 ${profile.pillars.day} · 일간 ${profile.dayMaster.stem}(${profile.dayMaster.element})`;
+        wrap.appendChild(tag);
+      }
+
+      if (recommendation.summary) {
+        const summary = document.createElement("p");
+        summary.textContent = recommendation.summary;
+        summary.style.marginTop = "8px";
+        wrap.appendChild(summary);
+      }
+
+      if (recommendation.explanation) {
+        const explanation = document.createElement("p");
+        explanation.textContent = recommendation.explanation;
+        explanation.style.marginTop = "8px";
+        wrap.appendChild(explanation);
+      }
+
+      const balls = document.createElement("div");
+      balls.className = "chat-lotto-balls";
+      recommendation.numbers.forEach((num) => {
+        balls.appendChild(createHistoryBall(num));
+      });
+      const bonusLabel = document.createElement("span");
+      bonusLabel.className = "bonus-label";
+      bonusLabel.textContent = "+";
+      balls.appendChild(bonusLabel);
+      balls.appendChild(createHistoryBall(recommendation.bonus, true));
+      wrap.appendChild(balls);
+
+      if (Array.isArray(recommendation.numberReasons) && recommendation.numberReasons.length) {
+        const list = document.createElement("ul");
+        list.className = "chat-reason-list";
+        recommendation.numberReasons.forEach((item) => {
+          const li = document.createElement("li");
+          li.textContent = `${item.number}번: ${item.reason}`;
+          list.appendChild(li);
+        });
+        wrap.appendChild(list);
+      }
+
+      const disclaimer = document.createElement("p");
+      disclaimer.className = "saju-note";
+      disclaimer.textContent = "※ 사주 기반 참고용 번호이며, 당첨을 보장하지 않습니다.";
+      wrap.appendChild(disclaimer);
+
+      return wrap;
+    }
+
+    function resetSajuChat() {
+      chatMessages.innerHTML = "";
+      sajuChatStarted = false;
+      appendChatMessage(
+        "bot",
+        "안녕하세요. 성별과 생년월일을 입력한 뒤 ‘추천 받기’를 누르면 사주에 맞는 로또 번호 6개와 보너스 1개를 추천해 드립니다."
+      );
+    }
+
+    async function sendSajuChat() {
+      const { gender, birthDate } = getSajuFormValues();
+      const message = chatInput.value.trim();
+
+      if (!gender || !birthDate) {
+        appendChatMessage("error", "성별과 생년월일을 모두 입력해 주세요.");
+        return;
+      }
+
+      chatSendBtn.disabled = true;
+      chatInput.disabled = true;
+
+      const userText = message || "사주에 맞는 로또 번호를 추천해 주세요.";
+      appendChatMessage("user", userText);
+      chatInput.value = "";
+
+      const loadingMsg = appendChatMessage("loading", "사주를 분석하고 번호를 추천하는 중…");
+
+      try {
+        const response = await fetch("/api/saju-lotto", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ gender, birthDate, message }),
+        });
+
+        const data = await response.json();
+        loadingMsg.remove();
+
+        if (!response.ok) {
+          appendChatMessage("error", data.error || "추천 요청에 실패했습니다.");
+          return;
+        }
+
+        appendChatMessage("bot", buildRecommendationNode(data.recommendation, data.profile));
+        sajuChatStarted = true;
+      } catch {
+        loadingMsg.remove();
+        appendChatMessage("error", "네트워크 오류입니다. Vercel에 배포된 환경에서 API 키가 설정되어 있는지 확인해 주세요.");
+      } finally {
+        chatSendBtn.disabled = false;
+        chatInput.disabled = false;
+        chatInput.focus();
+      }
+    }
+
+    chatSendBtn.addEventListener("click", sendSajuChat);
+    chatInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") sendSajuChat();
+    });
+    chatResetBtn.addEventListener("click", resetSajuChat);
+    resetSajuChat();
     winnerSearchBtn.addEventListener("click", filterWinners);
     winnerSearch.addEventListener("keydown", (e) => {
       if (e.key === "Enter") filterWinners();
