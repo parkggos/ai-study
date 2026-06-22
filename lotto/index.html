@@ -188,7 +188,7 @@
       display: grid;
       grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
       gap: 32px;
-      align-items: start;
+      align-items: stretch;
     }
 
     .draw-column {
@@ -197,27 +197,37 @@
 
     .saju-column {
       min-width: 0;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
     }
 
     .saju-section {
       margin-top: 0;
       padding-top: 0;
       border-top: none;
-      height: 100%;
       display: flex;
       flex-direction: column;
+      flex: 1;
+      min-height: 0;
+      max-height: 640px;
+      overflow: hidden;
     }
 
     .saju-section .chat-shell {
       flex: 1;
+      min-height: 0;
       display: flex;
       flex-direction: column;
+      overflow: hidden;
     }
 
     .saju-section .chat-messages {
       flex: 1;
-      min-height: 240px;
+      min-height: 0;
       max-height: none;
+      overflow-y: auto;
+      overscroll-behavior: contain;
     }
 
     @media (max-width: 768px) {
@@ -229,6 +239,7 @@
         margin-top: 8px;
         padding-top: 24px;
         border-top: 1px solid var(--hairline);
+        max-height: 520px;
       }
     }
 
@@ -899,6 +910,7 @@
       background: var(--surface-soft);
       border: 1px solid var(--hairline);
       border-radius: var(--radius-sm);
+      flex-shrink: 0;
     }
 
     .saju-profile-row {
@@ -963,6 +975,7 @@
       text-transform: uppercase;
       color: var(--mute);
       margin-bottom: 8px;
+      flex-shrink: 0;
     }
 
     .chat-messages {
@@ -1068,6 +1081,7 @@
       flex-wrap: wrap;
       gap: 8px;
       margin-top: 12px;
+      flex-shrink: 0;
     }
 
     .saju-note {
@@ -1139,8 +1153,8 @@
         max-width: 400px;
       }
 
-      .saju-section .chat-messages {
-        min-height: 360px;
+      .saju-section {
+        max-height: 680px;
       }
 
       .result-rack {
@@ -1548,6 +1562,65 @@
         ball.vx = 0;
         ball.vy = 0;
         ball.vz = 0;
+      });
+    }
+
+    function settleRemainingBalls() {
+      return new Promise((resolve) => {
+        const inDrumBalls = drumPhysics.balls.filter((b) => b.inDrum);
+        drumPhysics.mixPower = 0;
+        drumPhysics.mixing = false;
+        setMixingUI(false);
+
+        if (inDrumBalls.length === 0) {
+          if (drumPhysics.animId) {
+            cancelAnimationFrame(drumPhysics.animId);
+            drumPhysics.animId = null;
+          }
+          renderDrumFrame();
+          resolve();
+          return;
+        }
+
+        if (drumPhysics.animId) {
+          cancelAnimationFrame(drumPhysics.animId);
+          drumPhysics.animId = null;
+        }
+
+        let frames = 0;
+        const maxFrames = 200;
+
+        const loop = () => {
+          for (let s = 0; s < 4; s++) {
+            runIdlePhysicsSubstep(inDrumBalls, 5);
+          }
+          renderDrumFrame();
+          frames++;
+
+          const maxSpeed = inDrumBalls.reduce(
+            (peak, ball) => Math.max(peak, Math.hypot(ball.vx, ball.vy, ball.vz)),
+            0
+          );
+
+          if (frames >= maxFrames || (frames > 30 && maxSpeed < 0.025)) {
+            for (let i = 0; i < 12; i++) {
+              runIdlePhysicsSubstep(inDrumBalls, 6);
+            }
+            inDrumBalls.forEach((ball) => {
+              ball.vx = 0;
+              ball.vy = 0;
+              ball.vz = 0;
+            });
+            renderDrumFrame();
+            drumPhysics.animId = null;
+            resolve();
+            return;
+          }
+
+          drumPhysics.animId = requestAnimationFrame(loop);
+        };
+
+        drumPhysics.animId = requestAnimationFrame(loop);
       });
     }
 
@@ -2081,7 +2154,7 @@
       }
       await sleep(fast ? 200 : 350);
 
-      stopDrumLoop();
+      await settleRemainingBalls();
       await sortMainSlots(slots, sorted);
 
       if (sajuContext?.recommendation?.explanation) {
