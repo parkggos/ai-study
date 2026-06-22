@@ -1505,6 +1505,52 @@
       return picked;
     }
 
+    function buildAnalysisNumberReason(num, isBonus, stats) {
+      const freq = isBonus ? stats.bonusFreq[num] : stats.mainFreq[num];
+      const recent = isBonus ? stats.bonusRecent[num] : stats.mainRecent[num];
+      const lastSeen = isBonus ? stats.lastSeenBonus[num] : stats.lastSeenMain[num];
+      const maxFreq = isBonus ? stats.maxBonusFreq : stats.maxMainFreq;
+      const maxRecent = isBonus ? stats.maxBonusRecent : stats.maxMainRecent;
+      const totalDraws = stats.totalDraws;
+
+      const freqNorm = maxFreq > 0 ? freq / maxFreq : 0;
+      const recentNorm = maxRecent > 0 ? recent / maxRecent : 0;
+      const overdueNorm = totalDraws > 0 ? lastSeen / totalDraws : 0;
+
+      const topFactor = [
+        { key: "frequency", score: freqNorm * 0.4 },
+        { key: "recent", score: recentNorm * 0.35 },
+        { key: "overdue", score: overdueNorm * 0.25 },
+      ].sort((a, b) => b.score - a.score)[0].key;
+
+      if (topFactor === "frequency") {
+        const pct = Math.round(freqNorm * 100);
+        return `역대 ${totalDraws}회 중 ${freq}회 출현(빈도 상위 ${pct}%)으로, 출현 빈도 가중치 40%에서 높은 점수를 받았습니다.`;
+      }
+      if (topFactor === "recent") {
+        if (lastSeen === 0) {
+          return "직전 회차에 출현했으며, 최근 60회 흐름 가중치 35%에서 높은 점수를 받았습니다.";
+        }
+        return "최근 60회 추첨에서 활발히 등장한 번호로, 최근 흐름 가중치 35%에서 높은 점수를 받았습니다.";
+      }
+      if (lastSeen >= 10) {
+        return `최근 ${lastSeen}회 동안 나오지 않아, 미출현 기간 가중치 25%에서 높은 점수를 받았습니다.`;
+      }
+      return `${lastSeen}회 전 마지막 출현 이후 간격이 있어, 미출현 기간 가중치 25%에서 선정되었습니다.`;
+    }
+
+    function buildAnalysisNumberReasons(main, bonus, stats) {
+      const reasons = main.map((num) => ({
+        number: num,
+        reason: buildAnalysisNumberReason(num, false, stats),
+      }));
+      reasons.push({
+        number: bonus,
+        reason: buildAnalysisNumberReason(bonus, true, stats),
+      });
+      return reasons;
+    }
+
     function analyzeHistoricalDraw() {
       const winners = window.LOTTO_WINNERS || [];
       if (!winners.length) {
@@ -1570,6 +1616,21 @@
 
       const bonus = weightedPickNumbers(bonusCandidates.slice(0, 12), 1)[0];
 
+      const stats = {
+        mainFreq,
+        mainRecent,
+        lastSeenMain,
+        bonusFreq,
+        bonusRecent,
+        lastSeenBonus,
+        maxMainFreq,
+        maxMainRecent,
+        maxBonusFreq,
+        maxBonusRecent,
+        totalDraws: winners.length,
+        latestRound: winners[0]?.n,
+      };
+
       return {
         main,
         bonus,
@@ -1577,6 +1638,10 @@
         analysis: {
           totalDraws: winners.length,
           latestRound: winners[0]?.n,
+          summary: `역대 ${winners.length}회 당첨번호를 분석해 상위 후보군에서 추첨합니다.`,
+          explanation:
+            "출현 빈도 40%, 최근 60회 흐름 35%, 미출현 기간 25% 가중치로 번호를 선정했습니다.",
+          numberReasons: buildAnalysisNumberReasons(main, bonus, stats),
         },
       };
     }
@@ -2500,6 +2565,7 @@
       statusPrefix = "",
       analysisNote = "",
       sajuContext = null,
+      analysisContext = null,
       continueMixing = false,
     } = {}) {
       ensureAudio();
@@ -2530,6 +2596,9 @@
       if (sajuContext) {
         appendSajuProfileIntro(sajuContext.profile, sajuContext.recommendation);
       }
+      if (analysisContext) {
+        appendAnalysisProfileIntro(analysisContext);
+      }
 
       if (!continueMixing) {
         const inDrum = drumPhysics.balls.filter((b) => b.inDrum).length;
@@ -2555,6 +2624,12 @@
             getSajuReason(sajuContext.recommendation, num),
             `${i + 1}번째 당첨번호`
           );
+        } else if (analysisContext) {
+          appendSajuNumberReveal(
+            num,
+            getAnalysisReason(analysisContext, num),
+            `${i + 1}번째 당첨번호`
+          );
         }
         clearChuteBall();
         await sleep(fast ? 150 : 350);
@@ -2570,6 +2645,12 @@
           getSajuReason(sajuContext.recommendation, bonus),
           "보너스 번호"
         );
+      } else if (analysisContext) {
+        appendSajuNumberReveal(
+          bonus,
+          getAnalysisReason(analysisContext, bonus),
+          "보너스 번호"
+        );
       }
       await sleep(fast ? 200 : 350);
 
@@ -2581,6 +2662,12 @@
       }
       if (sajuContext) {
         appendChatMessage("bot", "※ 사주 기반 참고용 번호이며, 당첨을 보장하지 않습니다.");
+      }
+      if (analysisContext?.explanation) {
+        appendChatMessage("bot", analysisContext.explanation);
+      }
+      if (analysisContext) {
+        appendChatMessage("bot", "※ 역대 당첨 데이터 기반 참고용 번호이며, 당첨을 보장하지 않습니다.");
       }
 
       drawStatus.textContent = `${prefix}추첨 완료 · ${sorted.join(", ")} + ${bonus}`;
@@ -2647,12 +2734,13 @@
       preset = null,
       statusPrefix = "",
       analysisNote = "",
+      analysisContext = null,
     } = {}) {
       if (isDrawing) return null;
       isDrawing = true;
       setControlsDisabled(true);
 
-      const numbers = await runLiveDraw({ fast, preset, statusPrefix, analysisNote });
+      const numbers = await runLiveDraw({ fast, preset, statusPrefix, analysisNote, analysisContext });
 
       if (addHistory) {
         addToHistory(numbers);
@@ -2679,6 +2767,17 @@
         preset: { numbers: analyzed.main, bonus: analyzed.bonus },
         statusPrefix: "분석 추첨",
         analysisNote,
+        analysisContext: analyzed.analysis
+          ? {
+              summary: analyzed.analysis.summary,
+              explanation: analyzed.analysis.explanation,
+              numberReasons: analyzed.analysis.numberReasons,
+              meta: {
+                totalDraws: analyzed.analysis.totalDraws,
+                latestRound: analyzed.analysis.latestRound,
+              },
+            }
+          : null,
       });
     });
 
@@ -2935,6 +3034,33 @@
     function getSajuReason(recommendation, num) {
       const item = recommendation.numberReasons?.find((entry) => entry.number === num);
       return item?.reason || `${num}번은 사주에 맞춰 추천된 번호입니다.`;
+    }
+
+    function getAnalysisReason(analysisContext, num) {
+      const item = analysisContext.numberReasons?.find((entry) => entry.number === num);
+      return item?.reason || `${num}번은 역대 당첨 데이터 분석으로 선정된 번호입니다.`;
+    }
+
+    function appendAnalysisProfileIntro(analysisContext) {
+      const wrap = document.createElement("div");
+      const tag = document.createElement("span");
+      tag.className = "chat-saju-tag";
+      tag.textContent = `역대 ${analysisContext.meta.totalDraws}회 분석 · 최신 ${analysisContext.meta.latestRound}회 기준`;
+      wrap.appendChild(tag);
+
+      if (analysisContext.summary) {
+        const summary = document.createElement("p");
+        summary.textContent = analysisContext.summary;
+        summary.style.marginTop = "8px";
+        wrap.appendChild(summary);
+      }
+
+      const note = document.createElement("p");
+      note.style.marginTop = "8px";
+      note.textContent = "역대 당첨 데이터 기반으로 번호별 선정 근거를 추첨과 함께 알려드립니다.";
+      wrap.appendChild(note);
+
+      appendChatMessage("bot", wrap);
     }
 
     function appendSajuProfileIntro(profile, recommendation) {
