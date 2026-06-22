@@ -1725,26 +1725,45 @@
       return -Math.sqrt(Math.max(cap * cap - horizontal * horizontal, 0)) + ballR * 0.6;
     }
 
+    function isBallOnFloor(ball, boundaryR = drumPhysics.boundaryR) {
+      const floorY = getDrumFloorY(ball.x, ball.z, boundaryR, ball.r);
+      return ball.y <= floorY + ball.r * 1.1;
+    }
+
     function isBallNearFloor(ball, boundaryR = drumPhysics.boundaryR) {
       const floorY = getDrumFloorY(ball.x, ball.z, boundaryR, ball.r);
-      return ball.y <= floorY + ball.r * 2.4;
+      return ball.y <= floorY + ball.r * 2.8;
     }
 
-    function countBallsNearFloor(balls, boundaryR = drumPhysics.boundaryR) {
-      return balls.filter((ball) => isBallNearFloor(ball, boundaryR)).length;
+    function applyWindToBall(ball, mixPower, mixTime) {
+      const swirl = mixTime * 2.4 + ball.x * 2.2 - ball.z * 1.6;
+      const gust = Math.sin(mixTime * 5.2 + ball.z * 2.8) * 0.5 + 0.5;
+      const strength = 0.028 * mixPower * (0.55 + gust * 0.45);
+
+      const windX = Math.cos(swirl) * strength + Math.cos(mixTime * 1.6) * strength * 0.55;
+      const windZ = Math.sin(swirl) * strength + Math.sin(mixTime * 1.6) * strength * 0.55;
+
+      ball.vx += windX;
+      ball.vz += windZ;
+
+      if (isBallOnFloor(ball)) {
+        ball.vy += strength * (0.45 + Math.random() * 0.35);
+      } else if (!isBallNearFloor(ball)) {
+        ball.vy -= strength * 0.35;
+      }
     }
 
-    function injectDrumMixEnergy() {
+    function injectDrumMixEnergy(mixPower = 3.5) {
+      const mixTime = drumPhysics.mixTime || 0;
       drumPhysics.balls
         .filter((b) => b.inDrum)
         .forEach((ball) => {
-          if (!isBallNearFloor(ball)) {
-            ball.vy -= 0.04;
-            return;
+          applyWindToBall(ball, mixPower, mixTime + ball.num * 0.03);
+          ball.vx += (Math.random() - 0.5) * 0.18;
+          ball.vz += (Math.random() - 0.5) * 0.18;
+          if (isBallOnFloor(ball)) {
+            ball.vy += 0.06 + Math.random() * 0.08;
           }
-          ball.vy += 0.035 + Math.random() * 0.045;
-          ball.vx += (Math.random() - 0.5) * 0.1;
-          ball.vz += (Math.random() - 0.5) * 0.1;
         });
     }
 
@@ -1877,7 +1896,7 @@
         ball.vx = bounced.vx;
         ball.vy = bounced.vy;
         ball.vz = bounced.vz;
-        dampWallTangent(ball, nx, ny, nz, drumPhysics.mixPower > 0 ? 0.5 : 0.62);
+        dampWallTangent(ball, nx, ny, nz, drumPhysics.mixPower > 0 ? 0.38 : 0.62);
         return bounced.energy;
       }
 
@@ -1972,51 +1991,42 @@
 
     function runMixingPhysicsSubstep(inDrumBalls, mixPower) {
       const { boundaryR } = drumPhysics;
-      const wallRestitution = 0.7;
-      const ballRestitution = 0.64;
-      const friction = 0.992;
-      const maxSpeed = 0.4;
+      const wallRestitution = 0.74;
+      const ballRestitution = 0.68;
+      const maxSpeed = 0.55;
       const dt = SUBSTEP_DT;
       let bounceEnergy = 0;
 
       drumPhysics.mixPulse = (drumPhysics.mixPulse || 0) + 1;
-      drumPhysics.mixTime += 0.05;
-      const tiltX = Math.sin(drumPhysics.mixTime * 2.6) * 0.012 * mixPower;
-      const tiltZ = Math.cos(drumPhysics.mixTime * 2.1) * 0.012 * mixPower;
-      const gDown = 0.038;
+      drumPhysics.mixTime += 0.07;
+      const gDown = 0.032;
 
       inDrumBalls.forEach((ball) => {
         ball.vy -= gDown;
-        if (!isBallNearFloor(ball, boundaryR)) {
-          ball.vy -= gDown * 0.8;
-        }
-        ball.vx += tiltX;
-        ball.vz += tiltZ;
+        applyWindToBall(ball, mixPower, drumPhysics.mixTime);
       });
 
-      if (drumPhysics.mixPulse % 9 === 0) {
+      if (drumPhysics.mixPulse % 5 === 0) {
+        const sweep = drumPhysics.mixTime * 2.1;
+        const gustX = Math.cos(sweep) * 0.09 * mixPower;
+        const gustZ = Math.sin(sweep) * 0.09 * mixPower;
         inDrumBalls.forEach((ball) => {
-          if (!isBallNearFloor(ball, boundaryR)) return;
-          ball.vy += 0.05 + Math.random() * 0.06;
-          ball.vx += (Math.random() - 0.5) * 0.12;
-          ball.vz += (Math.random() - 0.5) * 0.12;
+          ball.vx += gustX + (Math.random() - 0.5) * 0.06;
+          ball.vz += gustZ + (Math.random() - 0.5) * 0.06;
         });
       }
 
       inDrumBalls.forEach((ball) => {
-        ball.vx *= friction;
-        ball.vy *= friction;
-        ball.vz *= friction;
+        ball.vx *= 0.998;
+        ball.vy *= 0.994;
+        ball.vz *= 0.998;
         ball.x += ball.vx * dt;
         ball.y += ball.vy * dt;
         ball.z += ball.vz * dt;
         clampSpeed(ball, maxSpeed);
-        if (isBallNearFloor(ball, boundaryR)) {
-          dampTinyVelocity(ball);
-        }
       });
 
-      bounceEnergy += resolveAllCollisions(inDrumBalls, boundaryR, wallRestitution, ballRestitution, 2);
+      bounceEnergy += resolveAllCollisions(inDrumBalls, boundaryR, wallRestitution, ballRestitution, 3);
       return bounceEnergy;
     }
 
@@ -2031,7 +2041,7 @@
       const { balls, mixPower } = drumPhysics;
       const inDrumBalls = balls.filter((b) => b.inDrum);
       let totalBounce = 0;
-      const substeps = mixPower > 0 ? 5 : 2;
+      const substeps = mixPower > 0 ? 6 : 2;
 
       for (let s = 0; s < substeps; s++) {
         totalBounce += physicsSubstep(inDrumBalls, mixPower);
@@ -2348,7 +2358,7 @@
       const spinTime = fast ? 500 : 1200;
       const mixPower = fast ? 2.8 : 3.8;
 
-      drawStatus.textContent = `${prefix}${analysisNote}추첨기 가동 · 바닥에서 공이 튀며 섞입니다`;
+      drawStatus.textContent = `${prefix}${analysisNote}추첨기 가동 · 바람에 날려 공이 섞입니다`;
       drawStatus.classList.add("drawing");
       clearChuteBall();
 
@@ -2888,7 +2898,7 @@
       }
       buildResultRack();
       clearChuteBall();
-      drawStatus.textContent = "사주 분석 중 · 바닥에서 공이 튀며 섞입니다";
+      drawStatus.textContent = "사주 분석 중 · 바람에 날려 공이 섞입니다";
       drawStatus.classList.add("drawing");
 
       drumPhysics.mixPulse = 0;
