@@ -1898,14 +1898,14 @@
       const heightAboveFloor = ball.y - floorY;
 
       if (heightAboveFloor > ball.r * 3.4) {
-        const turb = 0.007 * mixPower * Math.sin(mixTime * 6.2 + ball.num * 1.05);
+        const turb = 0.0056 * mixPower * Math.sin(mixTime * 6.2 + ball.num * 1.05);
         ball.vx += turb;
         ball.vz += turb * 0.8;
         return;
       }
 
       const jetWave = Math.sin(mixTime * 4.4 + ball.num * 0.5) * 0.5 + 0.5;
-      const jet = 0.036 * mixPower * (0.38 + jetWave * 0.62);
+      const jet = 0.029 * mixPower * (0.38 + jetWave * 0.62);
 
       ball.vy += jet;
 
@@ -1927,12 +1927,12 @@
         .forEach((ball) => {
           applyFloorJetWind(ball, mixPower, mixTime + ball.num * 0.03);
           if (isBallOnFloor(ball)) {
-            ball.vy += 0.08 + Math.random() * 0.1;
+            ball.vy += 0.064 + Math.random() * 0.08;
             const dist = Math.hypot(ball.x, ball.z) || 0.001;
             const tx = -ball.z / dist;
             const tz = ball.x / dist;
-            ball.vx += tx * 0.085 * mixPower + (Math.random() - 0.5) * 0.09;
-            ball.vz += tz * 0.085 * mixPower + (Math.random() - 0.5) * 0.09;
+            ball.vx += tx * 0.068 * mixPower + (Math.random() - 0.5) * 0.072;
+            ball.vz += tz * 0.068 * mixPower + (Math.random() - 0.5) * 0.072;
           }
         });
     }
@@ -2245,8 +2245,8 @@
       const { boundaryR } = drumPhysics;
       const wallRestitution = 0.72;
       const ballRestitution = 0.66;
-      const maxHoriz = 0.48;
-      const maxVert = 1.02;
+      const maxHoriz = 0.38;
+      const maxVert = 0.82;
       const dt = SUBSTEP_DT;
       let bounceEnergy = 0;
 
@@ -2260,15 +2260,15 @@
       });
 
       if (drumPhysics.mixPulse % 10 === 0) {
-        const blast = 0.18 * mixPower;
+        const blast = 0.144 * mixPower;
         inDrumBalls.forEach((ball) => {
           if (!isBallInFloorJetZone(ball, boundaryR)) return;
           ball.vy += blast * (0.45 + Math.random() * 0.55);
           const dist = Math.hypot(ball.x, ball.z) || 0.001;
           const tx = -ball.z / dist;
           const tz = ball.x / dist;
-          ball.vx += tx * blast * 0.26 * (Math.random() - 0.5);
-          ball.vz += tz * blast * 0.26 * (Math.random() - 0.5);
+          ball.vx += tx * blast * 0.21 * (Math.random() - 0.5);
+          ball.vz += tz * blast * 0.21 * (Math.random() - 0.5);
         });
       }
 
@@ -2613,7 +2613,7 @@
       const bonusSlot = document.getElementById("bonusSlot");
       const drawOrder = shuffleArray(main);
       const spinTime = fast ? 500 : 1200;
-      const mixPower = fast ? 2.6 : 3.5;
+      const mixPower = fast ? 2.1 : 2.8;
 
       drawStatus.textContent = `${prefix}${analysisNote}추첨기 가동 · 바닥 바람으로 공이 막 돌아다닙니다`;
       drawStatus.classList.add("drawing");
@@ -3209,8 +3209,8 @@
 
       drumPhysics.mixPulse = 0;
       drumPhysics.mixTime = 0;
-      injectDrumMixEnergy(3.4);
-      startDrumLoop(3.4);
+      injectDrumMixEnergy(2.7);
+      startDrumLoop(2.7);
 
       return () => {};
     }
