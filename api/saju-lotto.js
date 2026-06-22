@@ -14,11 +14,18 @@ const SYSTEM_PROMPT = `당신은 한국 사주명리를 바탕으로 로또 6/45
   ]
 }
 
+추천 철학 (가장 중요):
+- 부족한 오행·결핍·보강·채운다는 논리로 번호를 고르지 마세요.
+- profile.recommendationFocus, strengths, favorableElements, dayMaster, strong을 중심으로
+  사주에서 이미 좋고 강한 기운(일간, 풍부한 오행, 일간을 돕는 오행, 조화로운 기둥)을 살려 번호를 고르세요.
+- summary·explanation·numberReasons 모두 '강점·길한 기운을 살렸다'는 관점으로 작성하세요.
+- lacking 필드가 있어도 언급하지 말고, 결핍 보충 표현을 쓰지 마세요.
+
 규칙:
 - numbers는 정확히 6개, 오름차순 정렬
 - bonus는 numbers와 중복 불가
 - numberReasons는 numbers 6개 + bonus 1개 모두 포함 (총 7개)
-- 오행(목화토금수), 일간, 부족/과다 오행, 성별, 대운 방향을 근거로 설명
+- 오행(목화토금수), 일간, favorableElements, strengths, 성별, 대운 방향을 근거로 설명
 - 번호와 오행 연결은 1~45를 10주기(갑을병정...)와 12지(자축인...) 순환으로 해석
 - 과장된 당첨 보장 표현 금지, 참고용 번호임을 명시
 - 한국어로 작성`;
@@ -28,7 +35,7 @@ function buildUserPrompt(profile, message) {
     "사용자 사주 프로필:",
     JSON.stringify(profile, null, 2),
     "",
-    message ? `사용자 추가 질문: ${message}` : "사용자 요청: 오늘 사주에 맞는 로또 번호 6개와 보너스 1개를 추천해 주세요.",
+    message ? `사용자 추가 질문: ${message}` : "사용자 요청: 내 사주에서 좋고 강한 기운(일간·favorableElements·strengths)을 살려 로또 번호 6개와 보너스 1개를 추천해 주세요. 부족한 오행을 채우는 방식은 사용하지 마세요.",
   ].join("\n");
 }
 

@@ -107,6 +107,76 @@ function countElements(pillars) {
   return counts;
 }
 
+const ELEMENT_GENERATOR = {
+  목: "수",
+  화: "목",
+  토: "화",
+  금: "토",
+  수: "금",
+};
+
+const ELEMENT_HANJA = {
+  목: "木",
+  화: "火",
+  토: "土",
+  금: "金",
+  수: "水",
+};
+
+function formatElement(name) {
+  return `${name}(${ELEMENT_HANJA[name]})`;
+}
+
+function buildStrengthProfile(dayMaster, elements, pillars) {
+  const dayElement = dayMaster.element;
+  const generator = ELEMENT_GENERATOR[dayElement];
+  const strong = Object.entries(elements)
+    .filter(([, count]) => count >= 3)
+    .map(([name]) => name);
+  const favorableSet = new Set([dayElement, generator, ...strong]);
+  const favorableElements = [...favorableSet];
+
+  const strengths = [
+    `일간 ${dayMaster.stem}${ELEMENT_HANJA[dayElement]}을 중심으로 사주의 좋은 기운을 살립니다.`,
+  ];
+
+  if (elements[dayElement] >= 2) {
+    strengths.push(`${formatElement(dayElement)} 기운이 사주에 안정적으로 자리 잡고 있습니다.`);
+  } else {
+    strengths.push(`일간 ${dayMaster.stem}${ELEMENT_HANJA[dayElement]}의 ${formatElement(dayElement)} 기운을 중심으로 조화로운 번호를 고릅니다.`);
+  }
+
+  if (generator && elements[generator] > 0) {
+    strengths.push(`${formatElement(generator)}가 ${formatElement(dayElement)}을 도와주는 흐름이 있습니다.`);
+  }
+
+  if (strong.length) {
+    strengths.push(`사주에서 두드러진 오행: ${strong.join(", ")}`);
+  }
+
+  const alignedPillars = pillars
+    .filter(({ stem }) => STEM_ELEMENT[stem] === dayElement || STEM_ELEMENT[stem] === generator)
+    .map(({ name, label }) => `${name} ${label}`);
+
+  if (alignedPillars.length) {
+    strengths.push(`일간과 잘 어울리는 기둥: ${alignedPillars.join(", ")}`);
+  }
+
+  return {
+    favorableElements,
+    strengths,
+    recommendationFocus: {
+      principle:
+        "부족한 오행을 메우는 방식이 아니라, 사주에서 강하고 조화로운 기운(일간·용·희·풍부한 오행)을 번호에 담을 것",
+      center: `일간 ${dayMaster.stem}${ELEMENT_HANJA[dayElement]}`,
+      favorableElements,
+      strongElements: strong,
+      supportingElement: generator,
+      doNotUse: "부족·결핍·보강·채운다는 표현과 논리",
+    },
+  };
+}
+
 function buildSajuProfile({ gender, birthDate }) {
   const parsed = parseBirthDate(birthDate);
   if (!parsed) {
@@ -129,10 +199,11 @@ function buildSajuProfile({ gender, birthDate }) {
   const lacking = Object.entries(elements)
     .filter(([, count]) => count === 0)
     .map(([name]) => name);
-  const strong = Object.entries(elements)
-    .sort((a, b) => b[1] - a[1])
-    .filter(([, count]) => count >= 3)
-    .map(([name]) => name);
+  const dayMaster = {
+    stem: day.stem,
+    element: STEM_ELEMENT[day.stem],
+  };
+  const strengthProfile = buildStrengthProfile(dayMaster, elements, pillars);
 
   return {
     gender: gender === "male" ? "남성" : "여성",
@@ -143,15 +214,15 @@ function buildSajuProfile({ gender, birthDate }) {
       month: month.label,
       day: day.label,
     },
-    dayMaster: {
-      stem: day.stem,
-      element: STEM_ELEMENT[day.stem],
-    },
+    dayMaster,
     elements,
     lacking,
-    strong,
+    strong: strengthProfile.recommendationFocus.strongElements,
+    strengths: strengthProfile.strengths,
+    favorableElements: strengthProfile.favorableElements,
+    recommendationFocus: strengthProfile.recommendationFocus,
     daewoonDirection: gender === "male" ? "顺行(순행)" : "逆行(역행)",
-    note: "시주(태어난 시각)는 미입력 상태이며, 절기 기준의 근사 계산입니다.",
+    note: "시주(태어난 시각)는 미입력 상태이며, 절기 기준의 근사 계산입니다. lacking 필드는 참고용이며 번호 추천 근거로 사용하지 않습니다.",
   };
 }
 

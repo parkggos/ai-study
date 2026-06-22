@@ -2516,9 +2516,18 @@
         wrap.appendChild(summary);
       }
 
+      if (Array.isArray(profile.strengths) && profile.strengths.length) {
+        const strengthNote = document.createElement("p");
+        strengthNote.style.marginTop = "8px";
+        strengthNote.style.color = "var(--mute)";
+        strengthNote.style.fontSize = "14px";
+        strengthNote.textContent = profile.strengths[0];
+        wrap.appendChild(strengthNote);
+      }
+
       const note = document.createElement("p");
       note.style.marginTop = "8px";
-      note.textContent = "추첨과 함께 번호별 사주 근거를 순서대로 알려드립니다.";
+      note.textContent = "사주에서 좋은 기운을 살린 번호별 근거를 추첨과 함께 알려드립니다.";
       wrap.appendChild(note);
 
       appendChatMessage("bot", wrap);
@@ -2607,7 +2616,7 @@
       sajuChatStarted = false;
       appendChatMessage(
         "bot",
-        "안녕하세요. 성별과 생년월일을 입력한 뒤 ‘사주 추천 · 추첨’을 누르면 분석하는 동안 왼쪽 추첨기가 돌아가고, 추천 번호를 뽑습니다."
+        "안녕하세요. 성별과 생년월일을 입력한 뒤 ‘사주 추천 · 추첨’을 누르면, 사주에서 좋고 강한 기운을 바탕으로 번호를 추천하고 왼쪽 추첨기로 뽑습니다."
       );
     }
 
@@ -2661,7 +2670,7 @@
       isDrawing = true;
       setControlsDisabled(true);
 
-      const userText = message || "사주에 맞는 로또 번호를 추천해 주세요.";
+      const userText = message || "내 사주에서 좋고 강한 기운을 살려 로또 번호를 추천해 주세요.";
       appendChatMessage("user", userText);
       chatInput.value = "";
 
