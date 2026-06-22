@@ -33,6 +33,8 @@
       --ball-3: #ef5350;
       --ball-4: #78909c;
       --ball-5: #66bb6a;
+      --page-max: 1160px;
+      --page-gutter: 24px;
     }
 
     * {
@@ -56,13 +58,14 @@
     .hero {
       background: var(--surface-dark);
       color: var(--on-dark);
-      padding: 48px 24px;
+      padding: 48px 0;
       position: relative;
     }
 
     .hero-inner {
-      max-width: 720px;
+      max-width: var(--page-max);
       margin: 0 auto;
+      padding: 0 var(--page-gutter);
     }
 
     .hero .corner-square {
@@ -105,9 +108,9 @@
     }
 
     .sub-nav-inner {
-      max-width: 720px;
+      max-width: var(--page-max);
       margin: 0 auto;
-      padding: 0 24px;
+      padding: 0 var(--page-gutter);
       display: flex;
       gap: 8px;
       min-height: 56px;
@@ -137,9 +140,9 @@
     main {
       flex: 1;
       width: 100%;
-      max-width: 720px;
+      max-width: var(--page-max);
       margin: 0 auto;
-      padding: 32px 24px 64px;
+      padding: 32px var(--page-gutter) 64px;
     }
 
     .panel {
@@ -183,8 +186,8 @@
 
     .draw-layout {
       display: grid;
-      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-      gap: 24px;
+      grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
+      gap: 32px;
       align-items: start;
     }
 
@@ -1067,7 +1070,7 @@
     .footer-section {
       background: var(--surface-dark);
       color: var(--on-dark-mute);
-      padding: 32px 24px;
+      padding: 32px var(--page-gutter);
       font-size: 12px;
       font-weight: 400;
       line-height: 1.25;
@@ -1075,22 +1078,70 @@
       border-top: 1px solid var(--hairline-strong);
     }
 
+    .footer-inner {
+      max-width: var(--page-max);
+      margin: 0 auto;
+    }
+
     @media (min-width: 768px) {
+      :root {
+        --page-gutter: 32px;
+      }
+
       .hero {
-        padding: 64px 48px;
+        padding: 64px 0;
       }
 
       .hero .corner-square {
         top: 32px;
-        left: calc(50% - 360px);
+        left: max(var(--page-gutter), calc(50% - var(--page-max) / 2));
       }
 
       main {
-        padding: 48px 24px 64px;
+        padding: 48px var(--page-gutter) 72px;
+      }
+
+      .card {
+        padding: 28px 32px;
       }
 
       .footer-section {
-        padding: 48px 24px;
+        padding: 48px var(--page-gutter);
+      }
+    }
+
+    @media (min-width: 1024px) {
+      :root {
+        --page-max: 1240px;
+        --page-gutter: 40px;
+      }
+
+      .draw-layout {
+        gap: 48px;
+      }
+
+      .globe-housing {
+        width: min(360px, 100%);
+        height: min(360px, 100%);
+      }
+
+      .machine-stand {
+        max-width: 400px;
+      }
+
+      .saju-section .chat-messages {
+        min-height: 360px;
+      }
+
+      .result-rack {
+        gap: 12px;
+        padding: 24px 20px;
+      }
+
+      .rack-slot {
+        width: 54px;
+        height: 54px;
+        font-size: 17px;
       }
     }
 
@@ -1236,7 +1287,7 @@
     </div>
   </main>
 
-  <footer class="footer-section">한국 로또 6/45 · 데이터: smok95/lotto (동행복권 공개 정보 기반, 1~1229회)</footer>
+  <footer class="footer-section"><div class="footer-inner">한국 로또 6/45 · 데이터: smok95/lotto (동행복권 공개 정보 기반, 1~1229회)</div></footer>
 
   <script src="winners-data.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
