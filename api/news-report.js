@@ -58,6 +58,28 @@ function extractSources(groundingMetadata) {
   return sources;
 }
 
+function parseJsonFromText(text) {
+  const trimmed = text.trim();
+
+  try {
+    return JSON.parse(trimmed);
+  } catch {
+    // continue
+  }
+
+  const codeBlock = trimmed.match(/```(?:json)?\s*([\s\S]*?)```/);
+  if (codeBlock) {
+    return JSON.parse(codeBlock[1].trim());
+  }
+
+  const objectMatch = trimmed.match(/\{[\s\S]*\}/);
+  if (objectMatch) {
+    return JSON.parse(objectMatch[0]);
+  }
+
+  throw new Error("AI JSON 파싱 실패");
+}
+
 async function callGeminiWithSearch(keyword) {
   const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
   if (!apiKey) {
@@ -76,7 +98,6 @@ async function callGeminiWithSearch(keyword) {
       tools: [{ google_search: {} }],
       generationConfig: {
         temperature: 0.4,
-        responseMimeType: "application/json",
       },
     }),
   });
@@ -93,7 +114,7 @@ async function callGeminiWithSearch(keyword) {
 
   let report;
   try {
-    report = JSON.parse(content);
+    report = parseJsonFromText(content);
   } catch {
     throw new Error("AI JSON 파싱 실패");
   }
