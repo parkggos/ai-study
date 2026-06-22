@@ -895,9 +895,24 @@
       overflow: hidden;
     }
 
+    .saju-section {
+      margin-top: 28px;
+      padding-top: 24px;
+      border-top: 1px solid var(--hairline);
+    }
+
+    .saju-section-title {
+      font-size: 14px;
+      font-weight: 700;
+      line-height: 1.43;
+      text-transform: uppercase;
+      color: var(--mute);
+      margin-bottom: 8px;
+    }
+
     .chat-messages {
-      min-height: 320px;
-      max-height: 420px;
+      min-height: 180px;
+      max-height: 280px;
       overflow-y: auto;
       padding: 16px;
       display: flex;
@@ -1055,14 +1070,13 @@
     <div class="hero-inner">
       <p class="hero-eyebrow">Lotto 6/45</p>
       <h1>로또 추첨기</h1>
-      <p>투명 구체 안 1~45번 공 45개가 섞이며, 뽑힌 번호는 구체에서 빠집니다</p>
+      <p>투명 구체 추첨기와 사주 AI 추천을 한 화면에서 · 1~45번 공 45개</p>
     </div>
   </header>
 
   <nav class="sub-nav" role="tablist">
     <div class="sub-nav-inner">
-      <button type="button" class="tab-btn active" id="tabDraw" role="tab" aria-selected="true">번호 추첨</button>
-      <button type="button" class="tab-btn" id="tabSaju" role="tab" aria-selected="false">사주 추천</button>
+      <button type="button" class="tab-btn active" id="tabDraw" role="tab" aria-selected="true">추첨 · 사주</button>
       <button type="button" class="tab-btn" id="tabWinners" role="tab" aria-selected="false">역대 1등</button>
     </div>
   </nav>
@@ -1071,7 +1085,7 @@
     <div class="panel active" id="panelDraw" role="tabpanel">
       <section class="card" aria-live="polite">
         <span class="corner-square" aria-hidden="true"></span>
-        <h2 class="card-title">번호 추첨</h2>
+        <h2 class="card-title">추첨 · 사주</h2>
         <div class="draw-stage">
           <p class="draw-status" id="drawStatus">추첨기 준비 완료 · 추첨하기를 눌러주세요</p>
           <div class="lotto-machine">
@@ -1115,6 +1129,37 @@
             장
           </label>
         </div>
+
+        <div class="saju-section">
+          <h3 class="saju-section-title">사주 로또 추천</h3>
+          <p class="saju-note">성별·생년월일을 입력하면 사주(년·월·일주)로 번호를 추천하고, 추첨기에서 해당 번호를 뽑습니다.</p>
+
+          <form class="saju-profile" id="sajuProfileForm">
+            <div class="saju-profile-row">
+              <span>성별</span>
+              <div class="saju-gender-group">
+                <label><input type="radio" name="sajuGender" value="male" checked /> 남성</label>
+                <label><input type="radio" name="sajuGender" value="female" /> 여성</label>
+              </div>
+            </div>
+            <div class="saju-profile-row">
+              <label for="sajuBirthDate">생년월일</label>
+              <input type="date" id="sajuBirthDate" required />
+            </div>
+          </form>
+
+          <div class="chat-shell">
+            <div class="chat-messages" id="chatMessages" aria-live="polite"></div>
+            <div class="chat-input-row">
+              <input type="text" id="chatInput" placeholder="추가 질문 (예: 이번 주 재물운 번호)" maxlength="200" />
+              <button type="button" class="btn-primary" id="chatSendBtn">사주 추천 · 추첨</button>
+            </div>
+          </div>
+
+          <div class="chat-actions">
+            <button type="button" class="btn-outline" id="chatResetBtn">대화 초기화</button>
+          </div>
+        </div>
       </section>
 
       <section class="card">
@@ -1123,40 +1168,6 @@
         <ul class="history-list" id="historyList">
           <li class="empty-history" id="emptyHistory">아직 추첨 기록이 없습니다</li>
         </ul>
-      </section>
-    </div>
-
-    <div class="panel" id="panelSaju" role="tabpanel">
-      <section class="card">
-        <span class="corner-square" aria-hidden="true"></span>
-        <h2 class="card-title">사주 로또 상담</h2>
-        <p class="saju-note">성별과 생년월일을 입력하면 사주(년·월·일주)를 바탕으로 로또 번호를 추천하고, 사주 관점에서 이유를 설명합니다. AI API 키는 Vercel 환경 변수에 저장됩니다.</p>
-
-        <form class="saju-profile" id="sajuProfileForm">
-          <div class="saju-profile-row">
-            <span>성별</span>
-            <div class="saju-gender-group">
-              <label><input type="radio" name="sajuGender" value="male" checked /> 남성</label>
-              <label><input type="radio" name="sajuGender" value="female" /> 여성</label>
-            </div>
-          </div>
-          <div class="saju-profile-row">
-            <label for="sajuBirthDate">생년월일</label>
-            <input type="date" id="sajuBirthDate" required />
-          </div>
-        </form>
-
-        <div class="chat-shell">
-          <div class="chat-messages" id="chatMessages" aria-live="polite"></div>
-          <div class="chat-input-row">
-            <input type="text" id="chatInput" placeholder="추가 질문 (예: 이번 주 재물운 번호)" maxlength="200" />
-            <button type="button" class="btn-primary" id="chatSendBtn">추천 받기</button>
-          </div>
-        </div>
-
-        <div class="chat-actions">
-          <button type="button" class="btn-outline" id="chatResetBtn">대화 초기화</button>
-        </div>
       </section>
     </div>
 
@@ -1886,25 +1897,46 @@
       await sleep(300);
     }
 
-    async function runLiveDraw({ fast = false } = {}) {
+    function shuffleArray(arr) {
+      const copy = [...arr];
+      for (let i = copy.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [copy[i], copy[j]] = [copy[j], copy[i]];
+      }
+      return copy;
+    }
+
+    async function runLiveDraw({ fast = false, preset = null, statusPrefix = "" } = {}) {
       ensureAudio();
-      const { main, bonus, sorted } = drawFullSet();
+      let main;
+      let bonus;
+      let sorted;
+
+      if (preset) {
+        main = [...preset.numbers];
+        bonus = preset.bonus;
+        sorted = [...main].sort((a, b) => a - b);
+      } else {
+        ({ main, bonus, sorted } = drawFullSet());
+      }
+
       const remaining = Array.from({ length: MAX - MIN + 1 }, (_, i) => i + MIN);
       buildResultRack();
       resetAllDrumBalls();
 
       const slots = resultRack.querySelectorAll(".rack-slot:not(.bonus)");
       const bonusSlot = document.getElementById("bonusSlot");
-      const drawOrder = [...main];
+      const drawOrder = shuffleArray(main);
       const spinTime = fast ? 500 : 1200;
+      const prefix = statusPrefix ? `${statusPrefix} · ` : "";
 
-      drawStatus.textContent = "추첨기 가동 · 45개 공 혼합 중…";
+      drawStatus.textContent = `${prefix}추첨기 가동 · 45개 공 혼합 중…`;
       drawStatus.classList.add("drawing");
       await waitForMix(fast ? 800 : 1800, fast ? 2.8 : 4, remaining);
 
       for (let i = 0; i < COUNT; i++) {
         const num = drawOrder[i];
-        drawStatus.textContent = `${i + 1}번째 번호 추첨 · 구체에 ${remaining.length}개`;
+        drawStatus.textContent = `${prefix}${i + 1}번째 번호 추첨 · 구체에 ${remaining.length}개`;
         await pickNumberFromDrum(num, remaining, spinTime, fast);
         const idx = remaining.indexOf(num);
         if (idx !== -1) remaining.splice(idx, 1);
@@ -1914,14 +1946,14 @@
         await sleep(fast ? 150 : 350);
       }
 
-      drawStatus.textContent = `보너스 번호 추첨 · 구체에 ${remaining.length}개`;
+      drawStatus.textContent = `${prefix}보너스 번호 추첨 · 구체에 ${remaining.length}개`;
       await pickNumberFromDrum(bonus, remaining, spinTime, fast);
       fillSlot(bonusSlot, bonus);
       await sleep(fast ? 200 : 350);
 
       await sortMainSlots(slots, sorted);
 
-      drawStatus.textContent = `추첨 완료 · ${sorted.join(", ")} + ${bonus}`;
+      drawStatus.textContent = `${prefix}추첨 완료 · ${sorted.join(", ")} + ${bonus}`;
       drawStatus.classList.remove("drawing");
       if (!fast) playComplete();
 
@@ -1973,6 +2005,9 @@
       drawBtn.disabled = disabled;
       autoBtn.disabled = disabled;
       clearBtn.disabled = disabled;
+      chatSendBtn.disabled = disabled;
+      chatInput.disabled = disabled;
+      chatResetBtn.disabled = disabled;
     }
 
     async function performDraw({ addHistory = true, fast = false } = {}) {
@@ -2025,10 +2060,8 @@
     });
 
     const tabDraw = document.getElementById("tabDraw");
-    const tabSaju = document.getElementById("tabSaju");
     const tabWinners = document.getElementById("tabWinners");
     const panelDraw = document.getElementById("panelDraw");
-    const panelSaju = document.getElementById("panelSaju");
     const panelWinners = document.getElementById("panelWinners");
     const winnerSearch = document.getElementById("winnerSearch");
     const winnerSearchBtn = document.getElementById("winnerSearchBtn");
@@ -2044,17 +2077,12 @@
 
     function switchTab(target) {
       const isDraw = target === "draw";
-      const isSaju = target === "saju";
-      const isWinners = target === "winners";
       tabDraw.classList.toggle("active", isDraw);
-      tabSaju.classList.toggle("active", isSaju);
-      tabWinners.classList.toggle("active", isWinners);
+      tabWinners.classList.toggle("active", !isDraw);
       tabDraw.setAttribute("aria-selected", String(isDraw));
-      tabSaju.setAttribute("aria-selected", String(isSaju));
-      tabWinners.setAttribute("aria-selected", String(isWinners));
+      tabWinners.setAttribute("aria-selected", String(!isDraw));
       panelDraw.classList.toggle("active", isDraw);
-      panelSaju.classList.toggle("active", isSaju);
-      panelWinners.classList.toggle("active", isWinners);
+      panelWinners.classList.toggle("active", !isDraw);
     }
 
     function formatPrize(amount) {
@@ -2166,7 +2194,6 @@
     }
 
     tabDraw.addEventListener("click", () => switchTab("draw"));
-    tabSaju.addEventListener("click", () => switchTab("saju"));
     tabWinners.addEventListener("click", () => switchTab("winners"));
 
     const chatMessages = document.getElementById("chatMessages");
@@ -2256,13 +2283,15 @@
       sajuChatStarted = false;
       appendChatMessage(
         "bot",
-        "안녕하세요. 성별과 생년월일을 입력한 뒤 ‘추천 받기’를 누르면 사주에 맞는 로또 번호 6개와 보너스 1개를 추천해 드립니다."
+        "안녕하세요. 성별과 생년월일을 입력한 뒤 ‘사주 추천 · 추첨’을 누르면 사주 번호를 추천하고, 위 추첨기에서 해당 번호를 뽑습니다."
       );
     }
 
     const SAJU_API_URL = `${window.location.origin}/api/saju-lotto`;
 
     async function sendSajuChat() {
+      if (isDrawing) return;
+
       const { gender, birthDate } = getSajuFormValues();
       const message = chatInput.value.trim();
 
@@ -2279,8 +2308,8 @@
         return;
       }
 
-      chatSendBtn.disabled = true;
-      chatInput.disabled = true;
+      isDrawing = true;
+      setControlsDisabled(true);
 
       const userText = message || "사주에 맞는 로또 번호를 추천해 주세요.";
       appendChatMessage("user", userText);
@@ -2312,6 +2341,15 @@
 
         appendChatMessage("bot", buildRecommendationNode(data.recommendation, data.profile));
         sajuChatStarted = true;
+
+        document.querySelector(".draw-stage")?.scrollIntoView({ behavior: "smooth", block: "start" });
+
+        const sorted = await runLiveDraw({
+          fast: false,
+          preset: data.recommendation,
+          statusPrefix: "사주 추천",
+        });
+        addToHistory(sorted);
       } catch (err) {
         loadingMsg.remove();
         appendChatMessage(
@@ -2321,8 +2359,8 @@
             : "네트워크 오류입니다. 인터넷 연결과 배포 URL 접속 여부를 확인해 주세요."
         );
       } finally {
-        chatSendBtn.disabled = false;
-        chatInput.disabled = false;
+        isDrawing = false;
+        setControlsDisabled(false);
         chatInput.focus();
       }
     }
