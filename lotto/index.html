@@ -1807,6 +1807,25 @@
       drumPhysics.animId = requestAnimationFrame(loop);
     }
 
+    function ensureDrumMixing(power) {
+      startDrumLoop(power);
+      if (power > 0 && !drumPhysics.animId) {
+        startDrumLoop(power);
+      }
+    }
+
+    async function mixForDuration(duration, power) {
+      clearChuteBall();
+      ensureDrumMixing(power);
+      let tick = 0;
+      const mixInterval = setInterval(() => {
+        if (tick % 4 === 0) playMixTick();
+        tick++;
+      }, 70);
+      await sleep(duration);
+      clearInterval(mixInterval);
+    }
+
     function stopDrumLoop() {
       drumPhysics.mixPower = 0;
       drumPhysics.mixing = false;
@@ -1822,32 +1841,6 @@
       renderDrumFrame();
     }
 
-    function waitForMix(duration, power, pool) {
-      return new Promise((resolve) => {
-        const start = Date.now();
-        let tick = 0;
-        clearChuteBall();
-        startDrumLoop(power);
-
-        const mixInterval = setInterval(() => {
-          if (tick % 4 === 0) playMixTick();
-          tick++;
-        }, 70);
-
-        const check = () => {
-          if (Date.now() - start >= duration) {
-            clearInterval(mixInterval);
-            stopDrumLoop();
-            renderDrumFrame();
-            resolve();
-            return;
-          }
-          requestAnimationFrame(check);
-        };
-        requestAnimationFrame(check);
-      });
-    }
-
     function removeBallFromDrum(num) {
       const ball = drumPhysics.balls.find((b) => b.num === num && b.inDrum);
       if (!ball) return;
@@ -1857,7 +1850,9 @@
       ball.vy = 0.06 + Math.random() * 0.05;
       ball.vz = 0.12 + Math.random() * 0.06;
       updateBallCountLabel();
-      startDrumLoop(0);
+      if (drumPhysics.mixPower > 0 && !drumPhysics.animId) {
+        startDrumLoop(drumPhysics.mixPower);
+      }
     }
 
     function getDrumViewportSize() {
@@ -1978,10 +1973,8 @@
       slotEl.className = `rack-slot zone-${getZone(num)} filled${isBonus ? " bonus" : ""}`;
     }
 
-    async function pickNumberFromDrum(num, remaining, spinTime, fast) {
-      const power = fast ? 2.6 : 3.8;
+    async function pickNumberFromDrum(num, spinTime, fast) {
       clearChuteBall();
-      startDrumLoop(power);
 
       let tick = 0;
       const mixInterval = setInterval(() => {
@@ -1991,7 +1984,6 @@
 
       await sleep(spinTime);
       clearInterval(mixInterval);
-      stopDrumLoop();
 
       removeBallFromDrum(num);
       revealChuteNumber(num, !fast);
@@ -2017,7 +2009,13 @@
       return copy;
     }
 
-    async function runLiveDraw({ fast = false, preset = null, statusPrefix = "" } = {}) {
+    async function runLiveDraw({
+      fast = false,
+      preset = null,
+      statusPrefix = "",
+      sajuContext = null,
+      continueMixing = false,
+    } = {}) {
       ensureAudio();
       let main;
       let bonus;
@@ -2031,38 +2029,67 @@
         ({ main, bonus, sorted } = drawFullSet());
       }
 
-      const remaining = Array.from({ length: MAX - MIN + 1 }, (_, i) => i + MIN);
       buildResultRack();
-      resetAllDrumBalls();
+      if (!continueMixing) {
+        resetAllDrumBalls();
+      }
 
       const slots = resultRack.querySelectorAll(".rack-slot:not(.bonus)");
       const bonusSlot = document.getElementById("bonusSlot");
       const drawOrder = shuffleArray(main);
       const spinTime = fast ? 500 : 1200;
+      const mixPower = fast ? 2.8 : 3.8;
       const prefix = statusPrefix ? `${statusPrefix} · ` : "";
 
       drawStatus.textContent = `${prefix}추첨기 가동 · 45개 공 혼합 중…`;
       drawStatus.classList.add("drawing");
       clearChuteBall();
-      await waitForMix(fast ? 800 : 1800, fast ? 2.8 : 4, remaining);
+
+      if (sajuContext) {
+        appendSajuProfileIntro(sajuContext.profile, sajuContext.recommendation);
+      }
+
+      await mixForDuration(continueMixing ? (fast ? 400 : 800) : fast ? 800 : 1800, mixPower);
 
       for (let i = 0; i < COUNT; i++) {
         const num = drawOrder[i];
-        drawStatus.textContent = `${prefix}${i + 1}번째 번호 추첨 · 구체에 ${remaining.length}개`;
-        await pickNumberFromDrum(num, remaining, spinTime, fast);
-        const idx = remaining.indexOf(num);
-        if (idx !== -1) remaining.splice(idx, 1);
+        const inDrum = drumPhysics.balls.filter((b) => b.inDrum).length;
+        drawStatus.textContent = `${prefix}${i + 1}번째 번호 추첨 · 구체에 ${inDrum}개`;
+        await pickNumberFromDrum(num, spinTime, fast);
         fillSlot(slots[i], num);
+        if (sajuContext) {
+          appendSajuNumberReveal(
+            num,
+            getSajuReason(sajuContext.recommendation, num),
+            `${i + 1}번째 당첨번호`
+          );
+        }
         clearChuteBall();
         await sleep(fast ? 150 : 350);
       }
 
-      drawStatus.textContent = `${prefix}보너스 번호 추첨 · 구체에 ${remaining.length}개`;
-      await pickNumberFromDrum(bonus, remaining, spinTime, fast);
+      const inDrumBonus = drumPhysics.balls.filter((b) => b.inDrum).length;
+      drawStatus.textContent = `${prefix}보너스 번호 추첨 · 구체에 ${inDrumBonus}개`;
+      await pickNumberFromDrum(bonus, spinTime, fast);
       fillSlot(bonusSlot, bonus);
+      if (sajuContext) {
+        appendSajuNumberReveal(
+          bonus,
+          getSajuReason(sajuContext.recommendation, bonus),
+          "보너스 번호"
+        );
+      }
       await sleep(fast ? 200 : 350);
 
+      stopDrumLoop();
       await sortMainSlots(slots, sorted);
+
+      if (sajuContext?.recommendation?.explanation) {
+        appendChatMessage("bot", sajuContext.recommendation.explanation);
+      }
+      if (sajuContext) {
+        appendChatMessage("bot", "※ 사주 기반 참고용 번호이며, 당첨을 보장하지 않습니다.");
+      }
 
       drawStatus.textContent = `${prefix}추첨 완료 · ${sorted.join(", ")} + ${bonus}`;
       drawStatus.classList.remove("drawing");
@@ -2334,6 +2361,56 @@
       return msg;
     }
 
+    function getSajuReason(recommendation, num) {
+      const item = recommendation.numberReasons?.find((entry) => entry.number === num);
+      return item?.reason || `${num}번은 사주에 맞춰 추천된 번호입니다.`;
+    }
+
+    function appendSajuProfileIntro(profile, recommendation) {
+      const wrap = document.createElement("div");
+      const tag = document.createElement("span");
+      tag.className = "chat-saju-tag";
+      tag.textContent = `년주 ${profile.pillars.year} · 월주 ${profile.pillars.month} · 일주 ${profile.pillars.day} · 일간 ${profile.dayMaster.stem}(${profile.dayMaster.element})`;
+      wrap.appendChild(tag);
+
+      if (recommendation.summary) {
+        const summary = document.createElement("p");
+        summary.textContent = recommendation.summary;
+        summary.style.marginTop = "8px";
+        wrap.appendChild(summary);
+      }
+
+      const note = document.createElement("p");
+      note.style.marginTop = "8px";
+      note.textContent = "추첨과 함께 번호별 사주 근거를 순서대로 알려드립니다.";
+      wrap.appendChild(note);
+
+      appendChatMessage("bot", wrap);
+    }
+
+    function appendSajuNumberReveal(num, reason, label) {
+      const wrap = document.createElement("div");
+      const heading = document.createElement("p");
+      heading.style.fontWeight = "700";
+      heading.style.marginBottom = "6px";
+      heading.textContent = label;
+      wrap.appendChild(heading);
+
+      const balls = document.createElement("div");
+      balls.className = "chat-lotto-balls";
+      balls.appendChild(createHistoryBall(num, label === "보너스 번호"));
+      wrap.appendChild(balls);
+
+      const reasonEl = document.createElement("p");
+      reasonEl.textContent = reason;
+      reasonEl.style.marginTop = "8px";
+      reasonEl.style.color = "var(--mute)";
+      reasonEl.style.fontSize = "14px";
+      wrap.appendChild(reasonEl);
+
+      appendChatMessage("bot", wrap);
+    }
+
     function buildRecommendationNode(recommendation, profile) {
       const wrap = document.createElement("div");
 
@@ -2479,13 +2556,18 @@
           return;
         }
 
-        appendChatMessage("bot", buildRecommendationNode(data.recommendation, data.profile));
         sajuChatStarted = true;
+        appendChatMessage("bot", "사주 분석 완료 · 추첨기가 계속 돌아가며 번호를 뽑습니다.");
 
         const sorted = await runLiveDraw({
           fast: false,
           preset: data.recommendation,
           statusPrefix: "사주 추천",
+          continueMixing: true,
+          sajuContext: {
+            profile: data.profile,
+            recommendation: data.recommendation,
+          },
         });
         addToHistory(sorted);
       } catch (err) {
