@@ -2990,15 +2990,11 @@
       drawStatus.textContent = "사주 분석 중 · 공이 쌓입니다…";
       drawStatus.classList.add("drawing");
 
-      let mixInterval = null;
       const startMixLoop = () => {
+        drumPhysics.mixPulse = 0;
+        drumPhysics.mixTime = 0;
         injectDrumMixEnergy(3.4);
         startDrumLoop(3.4);
-        let tick = 0;
-        mixInterval = setInterval(() => {
-          if (tick % 3 === 0) playMixTick();
-          tick++;
-        }, 55);
       };
 
       showTowerStackPause(false)
@@ -3012,9 +3008,7 @@
           startMixLoop();
         });
 
-      return () => {
-        if (mixInterval) clearInterval(mixInterval);
-      };
+      return () => {};
     }
 
     function stopSajuAnalysisMix() {
