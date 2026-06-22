@@ -303,17 +303,6 @@
       flex-shrink: 0;
     }
 
-    .globe-housing.agitating {
-      animation: drumShake 0.1s ease infinite;
-    }
-
-    @keyframes drumShake {
-      0%, 100% { transform: translate(0, 0) rotate(0deg); }
-      25% { transform: translate(-2px, 2px) rotate(-0.6deg); }
-      50% { transform: translate(1px, -2px) rotate(0.4deg); }
-      75% { transform: translate(2px, 1px) rotate(0.6deg); }
-    }
-
     #drumViewport {
       display: block;
       width: 100%;
@@ -1363,7 +1352,7 @@
       5: ["#c8e6c9", "#66bb6a", "#2e7d32"],
     };
 
-    const VISUAL_SPEED = 0.32;
+    const VISUAL_SPEED = 0.288;
 
     const drumPhysics = {
       scene: null,
@@ -1386,7 +1375,6 @@
 
     function setMixingUI(active) {
       mixingLabel.classList.toggle("active", active);
-      globeHousing.classList.toggle("agitating", active);
       mixingLabel.innerHTML = active
         ? '<span class="mixing-indicator"></span>혼합 중'
         : '<span class="mixing-indicator"></span>대기';
@@ -1760,7 +1748,7 @@
       const wallRestitution = 0.52;
       const ballRestitution = 0.48;
       const friction = 0.982;
-      const maxSpeed = 0.26;
+      const maxSpeed = 0.234;
       const dt = 0.36 * VISUAL_SPEED;
 
       inDrumBalls.forEach((ball) => {
@@ -1782,7 +1770,7 @@
       const wallRestitution = 0.92;
       const ballRestitution = 0.91;
       const friction = 0.998;
-      const maxSpeed = 0.54;
+      const maxSpeed = 0.486;
       const dt = 0.34 * VISUAL_SPEED;
       let bounceEnergy = 0;
 
