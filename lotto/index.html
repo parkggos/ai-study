@@ -1587,7 +1587,75 @@
       ball.mesh.geometry.dispose();
       if (ball.mesh.material.map) ball.mesh.material.map.dispose();
       ball.mesh.material.dispose();
+      const labelSprite = ball.mesh.userData.labelSprite;
+      if (labelSprite) {
+        if (labelSprite.material.map) labelSprite.material.map.dispose();
+        labelSprite.material.dispose();
+      }
       ball.mesh = null;
+    }
+
+    function createTextureFromCanvas(canvas) {
+      const image = new Image();
+      image.src = canvas.toDataURL("image/png");
+      const texture = new THREE.Texture(image);
+      texture.colorSpace = THREE.SRGBColorSpace;
+      texture.anisotropy = 4;
+      texture.generateMipmaps = false;
+      texture.minFilter = THREE.LinearFilter;
+      texture.magFilter = THREE.LinearFilter;
+      texture.needsUpdate = true;
+      if (!image.complete) {
+        image.onload = () => {
+          texture.needsUpdate = true;
+        };
+      }
+      return texture;
+    }
+
+    function createBallNumberSprite(num, zone) {
+      const size = 128;
+      const canvas = document.createElement("canvas");
+      canvas.width = size;
+      canvas.height = size;
+      const ctx = canvas.getContext("2d");
+      const textColor = zone === 1 || zone === 5 ? "#111111" : "#ffffff";
+
+      ctx.clearRect(0, 0, size, size);
+      const fontSize = num >= 10 ? 52 : 60;
+      ctx.font = `700 ${fontSize}px Inter, Arial, sans-serif`;
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      if (zone !== 1 && zone !== 5) {
+        ctx.shadowColor = "rgba(0, 0, 0, 0.35)";
+        ctx.shadowBlur = 4;
+        ctx.shadowOffsetY = 1;
+      }
+      ctx.fillStyle = textColor;
+      ctx.fillText(String(num), size / 2, size / 2 + 1);
+      ctx.shadowColor = "transparent";
+
+      const map = new THREE.CanvasTexture(canvas);
+      map.colorSpace = THREE.SRGBColorSpace;
+      map.generateMipmaps = false;
+      map.minFilter = THREE.LinearFilter;
+      map.magFilter = THREE.LinearFilter;
+      map.needsUpdate = true;
+
+      const sprite = new THREE.Sprite(
+        new THREE.SpriteMaterial({
+          map,
+          transparent: true,
+          depthTest: true,
+          depthWrite: false,
+          toneMapped: false,
+        })
+      );
+      const scale = drumPhysics.ballR * 1.42;
+      sprite.scale.set(scale, scale, 1);
+      sprite.renderOrder = 2;
+      sprite.userData.ballNum = num;
+      return sprite;
     }
 
     function createBallMesh(num) {
@@ -1608,23 +1676,7 @@
       ctx.fillStyle = g;
       ctx.fillRect(0, 0, size, size);
 
-      const fontSize = num >= 10 ? size * 0.27 : size * 0.31;
-      const textColor = zone === 1 || zone === 5 ? "#111" : "#fff";
-      ctx.font = `700 ${fontSize}px Inter, Arial, sans-serif`;
-      ctx.textAlign = "center";
-      ctx.textBaseline = "middle";
-      if (zone !== 1 && zone !== 5) {
-        ctx.shadowColor = "rgba(0, 0, 0, 0.3)";
-        ctx.shadowBlur = 3;
-        ctx.shadowOffsetY = 1;
-      }
-      ctx.fillStyle = textColor;
-      ctx.fillText(String(num), cx, cy + 1);
-      ctx.shadowColor = "transparent";
-
-      const texture = new THREE.CanvasTexture(canvas);
-      texture.anisotropy = 4;
-      texture.colorSpace = THREE.SRGBColorSpace;
+      const texture = createTextureFromCanvas(canvas);
       const geometry = new THREE.SphereGeometry(drumPhysics.ballR, 22, 22);
       const material = new THREE.MeshStandardMaterial({
         map: texture,
@@ -1635,6 +1687,10 @@
         metalness: 0.06,
       });
       const mesh = new THREE.Mesh(geometry, material);
+      const labelSprite = createBallNumberSprite(num, zone);
+      mesh.add(labelSprite);
+      mesh.userData.ballNum = num;
+      mesh.userData.labelSprite = labelSprite;
       drumPhysics.scene.add(mesh);
       return mesh;
     }
@@ -1644,12 +1700,19 @@
         if (!ball.mesh) return;
         if (!ball.inDrum && !ball.exiting) {
           ball.mesh.visible = false;
+          const labelSprite = ball.mesh.userData.labelSprite;
+          if (labelSprite) labelSprite.visible = false;
           return;
         }
         ball.mesh.visible = true;
         ball.mesh.position.set(ball.x, ball.y, ball.z);
         ball.mesh.material.opacity = ball.opacity;
         ball.mesh.material.transparent = ball.opacity < 1;
+        const labelSprite = ball.mesh.userData.labelSprite;
+        if (labelSprite) {
+          labelSprite.visible = true;
+          labelSprite.material.opacity = ball.opacity;
+        }
       });
     }
 
