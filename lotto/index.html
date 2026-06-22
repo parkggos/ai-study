@@ -1,0 +1,1814 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>로또 추첨기</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --primary: #76b900;
+      --primary-dark: #5a8d00;
+      --on-primary: #000000;
+      --ink: #000000;
+      --canvas: #ffffff;
+      --surface-dark: #000000;
+      --surface-soft: #f7f7f7;
+      --surface-elevated: #1a1a1a;
+      --hairline: #cccccc;
+      --hairline-strong: #5e5e5e;
+      --body: #1a1a1a;
+      --mute: #757575;
+      --stone: #898989;
+      --ash: #a7a7a7;
+      --on-dark: #ffffff;
+      --on-dark-mute: rgba(255, 255, 255, 0.7);
+      --link-blue: #0046a4;
+      --radius-sm: 2px;
+      --font: "Inter", Arial, Helvetica, sans-serif;
+      --ball-1: #fbc02d;
+      --ball-2: #42a5f5;
+      --ball-3: #ef5350;
+      --ball-4: #78909c;
+      --ball-5: #66bb6a;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      min-height: 100vh;
+      font-family: var(--font);
+      font-size: 16px;
+      font-weight: 400;
+      line-height: 1.5;
+      background: var(--canvas);
+      color: var(--body);
+      display: flex;
+      flex-direction: column;
+    }
+
+    .hero {
+      background: var(--surface-dark);
+      color: var(--on-dark);
+      padding: 48px 24px;
+      position: relative;
+    }
+
+    .hero-inner {
+      max-width: 720px;
+      margin: 0 auto;
+    }
+
+    .hero .corner-square {
+      position: absolute;
+      top: 24px;
+      left: 24px;
+      width: 12px;
+      height: 12px;
+      background: var(--primary);
+    }
+
+    .hero-eyebrow {
+      font-size: 14px;
+      font-weight: 700;
+      line-height: 1.43;
+      text-transform: uppercase;
+      color: var(--primary);
+      margin-bottom: 12px;
+    }
+
+    .hero h1 {
+      font-size: clamp(32px, 5vw, 48px);
+      font-weight: 700;
+      line-height: 1.25;
+      letter-spacing: 0;
+      margin-bottom: 16px;
+    }
+
+    .hero p {
+      font-size: 22px;
+      font-weight: 400;
+      line-height: 1.75;
+      color: var(--on-dark-mute);
+      max-width: 36em;
+    }
+
+    .sub-nav {
+      background: var(--surface-soft);
+      border-bottom: 1px solid var(--hairline);
+    }
+
+    .sub-nav-inner {
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 0 24px;
+      display: flex;
+      gap: 8px;
+      min-height: 56px;
+      align-items: center;
+    }
+
+    .tab-btn {
+      font-family: inherit;
+      font-size: 14.4px;
+      font-weight: 700;
+      line-height: 1;
+      letter-spacing: 0.144px;
+      padding: 10px 18px;
+      border: none;
+      border-radius: var(--radius-sm);
+      background: transparent;
+      color: var(--ink);
+      cursor: pointer;
+      min-height: 40px;
+    }
+
+    .tab-btn.active {
+      background: var(--ink);
+      color: var(--on-dark);
+    }
+
+    main {
+      flex: 1;
+      width: 100%;
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 32px 24px 64px;
+    }
+
+    .panel {
+      display: none;
+    }
+
+    .panel.active {
+      display: block;
+    }
+
+    .card {
+      background: var(--canvas);
+      border: 1px solid var(--hairline);
+      border-radius: var(--radius-sm);
+      padding: 24px;
+      position: relative;
+      margin-bottom: 24px;
+    }
+
+    .card .corner-square {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 12px;
+      height: 12px;
+      background: var(--primary);
+    }
+
+    .card-title {
+      font-size: 14px;
+      font-weight: 700;
+      line-height: 1.43;
+      text-transform: uppercase;
+      color: var(--mute);
+      margin-bottom: 16px;
+    }
+
+    .draw-stage {
+      margin-bottom: 24px;
+    }
+
+    .draw-status {
+      text-align: center;
+      font-size: 15px;
+      font-weight: 700;
+      line-height: 1.67;
+      color: var(--ink);
+      min-height: 1.67em;
+      margin-bottom: 20px;
+      transition: color 0.2s;
+    }
+
+    .draw-status.drawing {
+      color: var(--primary);
+    }
+
+    .lotto-machine {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0;
+      margin-bottom: 20px;
+      padding: 16px 0 8px;
+    }
+
+    .machine-stand {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      width: 100%;
+      max-width: 340px;
+    }
+
+    .stand-neck {
+      width: 88px;
+      height: 28px;
+      background: linear-gradient(90deg, #b8b8b8, #ececec 30%, #f5f5f5 50%, #ececec 70%, #a8a8a8);
+      border: 1px solid #999;
+      border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8);
+    }
+
+    .globe-housing {
+      position: relative;
+      width: min(300px, 88vw);
+      height: min(300px, 88vw);
+    }
+
+    .globe-housing.agitating {
+      animation: drumShake 0.1s ease infinite;
+    }
+
+    @keyframes drumShake {
+      0%, 100% { transform: translate(0, 0) rotate(0deg); }
+      25% { transform: translate(-2px, 2px) rotate(-0.6deg); }
+      50% { transform: translate(1px, -2px) rotate(0.4deg); }
+      75% { transform: translate(2px, 1px) rotate(0.6deg); }
+    }
+
+    #drumCanvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      background: radial-gradient(circle at 50% 55%, #fafafa 0%, #e8eef2 55%, #d0dce4 100%);
+    }
+
+    .globe-frame {
+      position: absolute;
+      inset: 0;
+      border-radius: 50%;
+      border: 5px solid rgba(180, 190, 200, 0.85);
+      box-shadow:
+        inset 0 0 30px rgba(255, 255, 255, 0.5),
+        inset -8px -8px 20px rgba(0, 0, 0, 0.06),
+        0 8px 24px rgba(0, 0, 0, 0.12),
+        0 0 0 1px rgba(255, 255, 255, 0.6);
+      pointer-events: none;
+    }
+
+    .globe-frame::before {
+      content: "";
+      position: absolute;
+      top: 8%;
+      left: 12%;
+      width: 42%;
+      height: 24%;
+      border-radius: 50%;
+      background: linear-gradient(135deg, rgba(255, 255, 255, 0.65), transparent);
+      pointer-events: none;
+    }
+
+    .globe-frame::after {
+      content: "";
+      position: absolute;
+      bottom: 18%;
+      right: 14%;
+      width: 18%;
+      height: 10%;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.25);
+      pointer-events: none;
+    }
+
+    .globe-cap {
+      position: absolute;
+      top: -6px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 52px;
+      height: 14px;
+      background: linear-gradient(180deg, #ddd, #aaa);
+      border: 1px solid #888;
+      border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+      z-index: 2;
+    }
+
+    .exit-arm {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin-top: -4px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .exit-neck {
+      width: 44px;
+      height: 36px;
+      background: linear-gradient(90deg, #aaa, #ddd 40%, #ccc 60%, #999);
+      border: 1px solid #888;
+      border-top: none;
+      clip-path: polygon(8% 0, 92% 0, 100% 100%, 0 100%);
+    }
+
+    .display-tube {
+      width: 76px;
+      min-height: 84px;
+      padding: 10px;
+      background: linear-gradient(180deg, #f0f0f0, #e4e4e4);
+      border: 2px solid #bbb;
+      border-radius: var(--radius-sm);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow:
+        inset 0 4px 12px rgba(0, 0, 0, 0.08),
+        0 4px 12px rgba(0, 0, 0, 0.08);
+    }
+
+    .stand-base {
+      width: 160px;
+      height: 18px;
+      margin-top: 8px;
+      background: linear-gradient(180deg, #ccc, #888);
+      border: 1px solid #777;
+      border-radius: var(--radius-sm);
+      box-shadow: 0 6px 14px rgba(0, 0, 0, 0.15);
+    }
+
+    .stand-plate {
+      width: 200px;
+      height: 8px;
+      margin-top: 4px;
+      background: linear-gradient(180deg, #e8e8e8, #c8c8c8);
+      border: 1px solid #aaa;
+      border-radius: var(--radius-sm);
+    }
+
+    .machine-meta {
+      display: flex;
+      justify-content: center;
+      gap: 16px;
+      margin-top: 12px;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--mute);
+    }
+
+    .machine-meta span.active {
+      color: var(--primary);
+    }
+
+    .mixing-indicator {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--hairline);
+      display: inline-block;
+      margin-right: 4px;
+      vertical-align: middle;
+    }
+
+    .machine-meta span.active .mixing-indicator {
+      background: var(--primary);
+      box-shadow: 0 0 6px var(--primary);
+      animation: ledPulse 0.8s ease infinite;
+    }
+
+    @keyframes ledPulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.45; }
+    }
+
+    .chute-ball {
+      width: 52px;
+      height: 52px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 17px;
+      font-weight: 700;
+      background: radial-gradient(circle at 32% 28%, #eee, #bbb 100%);
+      color: var(--stone);
+      transition: transform 0.15s;
+    }
+
+    .chute-ball.spinning {
+      animation: chutePulse 0.09s ease infinite alternate;
+    }
+
+    .chute-ball.reveal {
+      animation: chuteDrop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    @keyframes chutePulse {
+      from { transform: scale(0.92); }
+      to { transform: scale(1.06); }
+    }
+
+    @keyframes chuteDrop {
+      0% { transform: translateY(-18px) scale(0.55); opacity: 0.5; }
+      60% { transform: translateY(3px) scale(1.08); }
+      100% { transform: translateY(0) scale(1); opacity: 1; }
+    }
+
+    .chute-ball.zone-1,
+    .rack-slot.zone-1.filled,
+    .history-ball.zone-1 {
+      background: radial-gradient(circle at 32% 28%, #fff4a8, var(--ball-1) 48%, #c9a000 100%);
+      color: var(--ink);
+    }
+
+    .chute-ball.zone-2,
+    .rack-slot.zone-2.filled,
+    .history-ball.zone-2 {
+      background: radial-gradient(circle at 32% 28%, #bbdefb, var(--ball-2) 48%, #1565c0 100%);
+      color: var(--on-dark);
+    }
+
+    .chute-ball.zone-3,
+    .rack-slot.zone-3.filled,
+    .history-ball.zone-3 {
+      background: radial-gradient(circle at 32% 28%, #ffcdd2, var(--ball-3) 48%, #c62828 100%);
+      color: var(--on-dark);
+    }
+
+    .chute-ball.zone-4,
+    .rack-slot.zone-4.filled,
+    .history-ball.zone-4 {
+      background: radial-gradient(circle at 32% 28%, #cfd8dc, var(--ball-4) 48%, #455a64 100%);
+      color: var(--on-dark);
+    }
+
+    .chute-ball.zone-5,
+    .rack-slot.zone-5.filled,
+    .history-ball.zone-5 {
+      background: radial-gradient(circle at 32% 28%, #c8e6c9, var(--ball-5) 48%, #2e7d32 100%);
+      color: var(--ink);
+    }
+
+    .result-rack-wrap {
+      margin-top: 12px;
+    }
+
+    .result-rack {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      align-items: center;
+      gap: 10px;
+      min-height: 72px;
+      padding: 20px 16px;
+      background: var(--surface-soft);
+      border: 1px solid var(--hairline);
+      border-radius: var(--radius-sm);
+    }
+
+    .rack-slot {
+      width: 50px;
+      height: 50px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      font-weight: 700;
+      background: radial-gradient(circle at 50% 60%, #ddd 0%, #eee 100%);
+      color: var(--stone);
+      border: none;
+      position: relative;
+      box-shadow:
+        inset 0 4px 8px rgba(0, 0, 0, 0.18),
+        inset 0 -2px 4px rgba(255, 255, 255, 0.8),
+        0 2px 4px rgba(0, 0, 0, 0.06);
+    }
+
+    .rack-slot::before {
+      content: "?";
+      position: absolute;
+      font-size: 14px;
+      color: var(--ash);
+    }
+
+    .rack-slot.filled::before {
+      content: none;
+    }
+
+    .rack-slot.filled {
+      animation: slotLand 0.45s cubic-bezier(0.34, 1.56, 0.64, 1);
+      box-shadow:
+        inset -3px -4px 6px rgba(0, 0, 0, 0.3),
+        inset 2px 2px 4px rgba(255, 255, 255, 0.35),
+        0 4px 8px rgba(0, 0, 0, 0.12);
+    }
+
+    @keyframes slotLand {
+      0% { transform: translateY(-16px) scale(0.35); opacity: 0; }
+      70% { transform: translateY(2px) scale(1.06); }
+      100% { transform: translateY(0) scale(1); opacity: 1; }
+    }
+
+    .rack-slot.bonus {
+      box-shadow:
+        inset 0 4px 8px rgba(0, 0, 0, 0.18),
+        0 0 0 2px var(--primary);
+    }
+
+    .rack-slot.bonus.filled {
+      box-shadow:
+        inset -4px -5px 8px rgba(0, 0, 0, 0.35),
+        inset 3px 3px 6px rgba(255, 255, 255, 0.3),
+        0 0 0 2px var(--primary),
+        0 0 12px rgba(118, 185, 0, 0.35);
+    }
+
+    .rack-divider {
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--mute);
+      padding: 0 4px;
+      line-height: 50px;
+    }
+
+    .rack-label {
+      width: 100%;
+      text-align: center;
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      color: var(--mute);
+      margin-top: 10px;
+      letter-spacing: 0.06em;
+    }
+
+    .ball {
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      font-weight: 700;
+      line-height: 1;
+      color: var(--on-dark);
+    }
+
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      justify-content: center;
+    }
+
+    button {
+      font-family: inherit;
+      font-size: 16px;
+      font-weight: 700;
+      line-height: 1.25;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s, color 0.15s;
+    }
+
+    button:disabled {
+      background: var(--surface-soft);
+      color: var(--ash);
+      border: 1px solid var(--hairline);
+      cursor: not-allowed;
+    }
+
+    .btn-primary {
+      background: var(--primary);
+      color: var(--on-primary);
+      border: 1px solid var(--primary);
+      padding: 11px 24px;
+      min-height: 44px;
+      flex: 1;
+      min-width: 140px;
+    }
+
+    .btn-primary:active:not(:disabled) {
+      background: var(--primary-dark);
+      border-color: var(--primary-dark);
+    }
+
+    .btn-outline {
+      background: transparent;
+      color: var(--ink);
+      border: 2px solid var(--primary);
+      padding: 11px 13px;
+      min-height: 44px;
+    }
+
+    .btn-outline:active:not(:disabled) {
+      background: var(--surface-soft);
+    }
+
+    .options {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      margin-top: 16px;
+      color: var(--mute);
+      font-size: 15px;
+      line-height: 1.67;
+    }
+
+    .options label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+    }
+
+    .options input[type="number"],
+    .winners-toolbar input[type="search"] {
+      width: 52px;
+      padding: 12px 16px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--hairline);
+      background: var(--canvas);
+      color: var(--ink);
+      font-family: inherit;
+      font-size: 16px;
+      line-height: 1.5;
+      text-align: center;
+      min-height: 44px;
+    }
+
+    .winners-toolbar input[type="search"] {
+      flex: 1;
+      min-width: 140px;
+      text-align: left;
+      min-height: 40px;
+      padding: 10px 16px;
+    }
+
+    .options input[type="number"]:focus,
+    .winners-toolbar input[type="search"]:focus {
+      outline: none;
+      border: 2px solid var(--primary);
+    }
+
+    .history-list,
+    .winners-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+      max-height: 280px;
+      overflow-y: auto;
+    }
+
+    .winners-list {
+      max-height: 480px;
+    }
+
+    .history-item,
+    .winner-item {
+      padding: 12px 0;
+      border-bottom: 1px solid var(--hairline);
+    }
+
+    .history-item:last-child,
+    .winner-item:last-child {
+      border-bottom: none;
+    }
+
+    .history-index {
+      font-size: 12px;
+      font-weight: 400;
+      line-height: 1.25;
+      color: var(--mute);
+      min-width: 1.5rem;
+    }
+
+    .history-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .history-balls,
+    .winner-numbers {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .history-ball {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      font-weight: 700;
+      line-height: 1;
+      color: var(--on-dark);
+      position: relative;
+      box-shadow:
+        inset -3px -4px 6px rgba(0, 0, 0, 0.35),
+        inset 2px 2px 4px rgba(255, 255, 255, 0.25),
+        0 3px 6px rgba(0, 0, 0, 0.15);
+    }
+
+    .history-ball.bonus {
+      outline: 2px solid var(--primary);
+      outline-offset: 1px;
+    }
+
+    .empty-history {
+      color: var(--mute);
+      font-size: 15px;
+      line-height: 1.67;
+      text-align: center;
+      padding: 16px 0;
+    }
+
+    .winners-toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+
+    .winners-summary {
+      color: var(--mute);
+      font-size: 12px;
+      font-weight: 400;
+      line-height: 1.25;
+      margin-bottom: 12px;
+    }
+
+    .winner-meta {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+
+    .winner-round {
+      font-size: 17px;
+      font-weight: 700;
+      line-height: 1.47;
+      color: var(--ink);
+    }
+
+    .winner-date {
+      font-size: 12px;
+      font-weight: 400;
+      line-height: 1.25;
+      color: var(--mute);
+    }
+
+    .winner-numbers {
+      margin-bottom: 8px;
+    }
+
+    .bonus-label {
+      color: var(--stone);
+      font-size: 12px;
+      font-weight: 700;
+      margin: 0 4px;
+    }
+
+    .winner-prize {
+      font-size: 16px;
+      font-weight: 700;
+      line-height: 1.5;
+      color: var(--primary);
+    }
+
+    .winner-prize.muted {
+      color: var(--mute);
+      font-weight: 400;
+    }
+
+    .winner-winners {
+      font-size: 15px;
+      font-weight: 400;
+      color: var(--mute);
+      margin-left: 8px;
+    }
+
+    .load-more-wrap {
+      display: flex;
+      justify-content: center;
+      margin-top: 16px;
+    }
+
+    .load-more-wrap.hidden {
+      display: none;
+    }
+
+    .footer-section {
+      background: var(--surface-dark);
+      color: var(--on-dark-mute);
+      padding: 32px 24px;
+      font-size: 12px;
+      font-weight: 400;
+      line-height: 1.25;
+      text-align: center;
+      border-top: 1px solid var(--hairline-strong);
+    }
+
+    @media (min-width: 768px) {
+      .hero {
+        padding: 64px 48px;
+      }
+
+      .hero .corner-square {
+        top: 32px;
+        left: calc(50% - 360px);
+      }
+
+      main {
+        padding: 48px 24px 64px;
+      }
+
+      .footer-section {
+        padding: 48px 24px;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .globe-housing {
+        width: min(260px, 88vw);
+        height: min(260px, 88vw);
+      }
+
+      .stand-base {
+        width: 140px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header class="hero">
+    <span class="corner-square" aria-hidden="true"></span>
+    <div class="hero-inner">
+      <p class="hero-eyebrow">Lotto 6/45</p>
+      <h1>로또 추첨기</h1>
+      <p>투명 구체 안 1~45번 공 45개가 섞이며, 뽑힌 번호는 구체에서 빠집니다</p>
+    </div>
+  </header>
+
+  <nav class="sub-nav" role="tablist">
+    <div class="sub-nav-inner">
+      <button type="button" class="tab-btn active" id="tabDraw" role="tab" aria-selected="true">번호 추첨</button>
+      <button type="button" class="tab-btn" id="tabWinners" role="tab" aria-selected="false">역대 1등</button>
+    </div>
+  </nav>
+
+  <main>
+    <div class="panel active" id="panelDraw" role="tabpanel">
+      <section class="card" aria-live="polite">
+        <span class="corner-square" aria-hidden="true"></span>
+        <h2 class="card-title">번호 추첨</h2>
+        <div class="draw-stage">
+          <p class="draw-status" id="drawStatus">추첨기 준비 완료 · 추첨하기를 눌러주세요</p>
+          <div class="lotto-machine">
+            <div class="machine-stand">
+              <div class="stand-neck" aria-hidden="true"></div>
+              <div class="globe-housing" id="globeHousing">
+                <canvas id="drumCanvas" width="300" height="300" aria-label="로또 추첨기 구체"></canvas>
+                <div class="globe-cap" aria-hidden="true"></div>
+                <div class="globe-frame" aria-hidden="true"></div>
+              </div>
+              <div class="exit-arm">
+                <div class="exit-neck" aria-hidden="true"></div>
+                <div class="display-tube">
+                  <div class="chute-ball" id="chuteBall">?</div>
+                </div>
+              </div>
+              <div class="stand-base" aria-hidden="true"></div>
+              <div class="stand-plate" aria-hidden="true"></div>
+            </div>
+            <div class="machine-meta">
+              <span id="ballCountLabel">공 45개</span>
+              <span id="mixingLabel"><span class="mixing-indicator"></span>대기</span>
+            </div>
+          </div>
+          <div class="result-rack-wrap">
+            <div class="result-rack" id="resultRack" aria-label="당첨 번호"></div>
+          </div>
+          <p class="rack-label">당첨번호 6개 + 보너스</p>
+        </div>
+
+        <div class="controls">
+          <button type="button" class="btn-primary" id="drawBtn">추첨하기</button>
+          <button type="button" class="btn-outline" id="autoBtn">5장 자동</button>
+          <button type="button" class="btn-outline" id="clearBtn">기록 지우기</button>
+        </div>
+
+        <div class="options">
+          <label>
+            자동 생성
+            <input type="number" id="autoCount" min="1" max="20" value="5" />
+            장
+          </label>
+        </div>
+      </section>
+
+      <section class="card">
+        <span class="corner-square" aria-hidden="true"></span>
+        <h2 class="card-title">추첨 기록</h2>
+        <ul class="history-list" id="historyList">
+          <li class="empty-history" id="emptyHistory">아직 추첨 기록이 없습니다</li>
+        </ul>
+      </section>
+    </div>
+
+    <div class="panel" id="panelWinners" role="tabpanel">
+      <section class="card">
+        <span class="corner-square" aria-hidden="true"></span>
+        <h2 class="card-title">역대 1등 당첨번호</h2>
+        <div class="winners-toolbar">
+          <input type="search" id="winnerSearch" placeholder="회차 검색 (예: 1229)" inputmode="numeric" />
+          <button type="button" class="btn-outline" id="winnerSearchBtn">검색</button>
+        </div>
+        <p class="winners-summary" id="winnersSummary"></p>
+        <ul class="winners-list" id="winnersList"></ul>
+        <div class="load-more-wrap" id="loadMoreWrap">
+          <button type="button" class="btn-outline" id="loadMoreBtn">더 보기</button>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <footer class="footer-section">한국 로또 6/45 · 데이터: smok95/lotto (동행복권 공개 정보 기반, 1~1229회)</footer>
+
+  <script src="winners-data.js"></script>
+  <script>
+    const MIN = 1;
+    const MAX = 45;
+    const COUNT = 6;
+
+    const drawStatus = document.getElementById("drawStatus");
+    const drumCanvas = document.getElementById("drumCanvas");
+    const globeHousing = document.getElementById("globeHousing");
+    const chuteBall = document.getElementById("chuteBall");
+    const ballCountLabel = document.getElementById("ballCountLabel");
+    const mixingLabel = document.getElementById("mixingLabel");
+    const resultRack = document.getElementById("resultRack");
+    const drawBtn = document.getElementById("drawBtn");
+    const autoBtn = document.getElementById("autoBtn");
+    const clearBtn = document.getElementById("clearBtn");
+    const autoCountInput = document.getElementById("autoCount");
+    const historyList = document.getElementById("historyList");
+
+    let isDrawing = false;
+    let history = [];
+    let audioCtx = null;
+
+    const BALL_COLORS = {
+      1: ["#fff4a8", "#fbc02d", "#c9a000"],
+      2: ["#bbdefb", "#42a5f5", "#1565c0"],
+      3: ["#ffcdd2", "#ef5350", "#c62828"],
+      4: ["#cfd8dc", "#78909c", "#455a64"],
+      5: ["#c8e6c9", "#66bb6a", "#2e7d32"],
+    };
+
+    const drumPhysics = {
+      ctx: null,
+      size: 300,
+      cx: 150,
+      cy: 150,
+      boundaryR: 128,
+      ballR: 12,
+      balls: [],
+      mixing: false,
+      mixPower: 0,
+      drumAngle: 0,
+      animId: null,
+      tickCount: 0,
+      lastBounceSound: 0,
+    };
+
+    function setMixingUI(active) {
+      mixingLabel.classList.toggle("active", active);
+      globeHousing.classList.toggle("agitating", active);
+      mixingLabel.innerHTML = active
+        ? '<span class="mixing-indicator"></span>혼합 중'
+        : '<span class="mixing-indicator"></span>대기';
+    }
+
+    function updateBallCountLabel() {
+      const count = drumPhysics.balls.filter((b) => b.inDrum).length;
+      ballCountLabel.textContent = `공 ${count}개`;
+    }
+
+    function getZone(num) {
+      if (num <= 10) return 1;
+      if (num <= 20) return 2;
+      if (num <= 30) return 3;
+      if (num <= 40) return 4;
+      if (num <= 45) return 5;
+      return 5;
+    }
+
+    function sleep(ms) {
+      return new Promise((resolve) => setTimeout(resolve, ms));
+    }
+
+    function ensureAudio() {
+      if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      }
+      if (audioCtx.state === "suspended") {
+        audioCtx.resume();
+      }
+    }
+
+    function playTone(freq, duration, type = "sine", volume = 0.06) {
+      if (!audioCtx) return;
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = type;
+      osc.frequency.value = freq;
+      gain.gain.setValueAtTime(volume, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start();
+      osc.stop(audioCtx.currentTime + duration);
+    }
+
+    function playMixTick() {
+      playTone(180 + Math.random() * 80, 0.04, "square", 0.025);
+    }
+
+    function playReveal() {
+      playTone(520, 0.12, "sine", 0.08);
+      setTimeout(() => playTone(780, 0.18, "sine", 0.06), 80);
+    }
+
+    function playComplete() {
+      playTone(440, 0.15, "sine", 0.07);
+      setTimeout(() => playTone(554, 0.15, "sine", 0.07), 120);
+      setTimeout(() => playTone(659, 0.25, "sine", 0.08), 240);
+    }
+
+    function drawFullSet() {
+      const pool = Array.from({ length: MAX - MIN + 1 }, (_, i) => i + MIN);
+      const main = [];
+      for (let i = 0; i < COUNT; i++) {
+        const idx = Math.floor(Math.random() * pool.length);
+        main.push(pool.splice(idx, 1)[0]);
+      }
+      const bonusIdx = Math.floor(Math.random() * pool.length);
+      const bonus = pool[bonusIdx];
+      return { main, bonus, sorted: [...main].sort((a, b) => a - b) };
+    }
+
+    function initDrumPhysics(numbers) {
+      stopDrumLoop();
+      const { cx, cy, boundaryR, ballR } = drumPhysics;
+      drumPhysics.drumAngle = 0;
+      const golden = Math.PI * (3 - Math.sqrt(5));
+      drumPhysics.balls = numbers.map((num, i) => {
+        const t = (i + 0.5) / numbers.length;
+        const angle = i * golden;
+        const dist = Math.sqrt(t) * (boundaryR - ballR - 10);
+        const angleJitter = (Math.random() - 0.5) * 0.35;
+        return {
+          num,
+          x: cx + Math.cos(angle + angleJitter) * dist,
+          y: cy + Math.sin(angle + angleJitter) * dist,
+          vx: (Math.random() - 0.5) * 3.5,
+          vy: (Math.random() - 0.5) * 3.5,
+          r: ballR,
+          inDrum: true,
+          exiting: false,
+          opacity: 1,
+        };
+      });
+      updateBallCountLabel();
+      renderDrumFrame();
+    }
+
+    function resetAllDrumBalls() {
+      initDrumPhysics(Array.from({ length: MAX - MIN + 1 }, (_, i) => i + MIN));
+    }
+
+    function getBallGradient(ctx, zone, x, y, r) {
+      const colors = BALL_COLORS[zone];
+      const g = ctx.createRadialGradient(x - r * 0.35, y - r * 0.35, r * 0.1, x, y, r);
+      g.addColorStop(0, colors[0]);
+      g.addColorStop(0.55, colors[1]);
+      g.addColorStop(1, colors[2]);
+      return g;
+    }
+
+    function renderDrumFrame() {
+      const { ctx, size, cx, cy, boundaryR, balls } = drumPhysics;
+      if (!ctx) return;
+
+      ctx.clearRect(0, 0, size, size);
+
+      const bg = ctx.createRadialGradient(cx, cy, boundaryR * 0.2, cx, cy, boundaryR);
+      bg.addColorStop(0, "#fafafa");
+      bg.addColorStop(0.7, "#eef3f6");
+      bg.addColorStop(1, "#d8e2ea");
+      ctx.fillStyle = bg;
+      ctx.beginPath();
+      ctx.arc(cx, cy, boundaryR, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(cx, cy, boundaryR - 1, 0, Math.PI * 2);
+      ctx.clip();
+
+      const sorted = [...balls].sort((a, b) => a.y - b.y);
+      sorted.forEach((ball) => {
+        if (!ball.inDrum && !ball.exiting) return;
+        ctx.save();
+        ctx.globalAlpha = ball.opacity;
+        const zone = getZone(ball.num);
+        ctx.fillStyle = getBallGradient(ctx, zone, ball.x, ball.y, ball.r);
+        ctx.beginPath();
+        ctx.arc(ball.x, ball.y, ball.r, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = zone === 1 || zone === 5 ? "#111" : "#fff";
+        ctx.font = `700 ${ball.r * 0.95}px Inter, Arial, sans-serif`;
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(String(ball.num), ball.x, ball.y + 0.5);
+        ctx.restore();
+      });
+
+      ctx.restore();
+    }
+
+    function clampSpeed(ball, maxSpeed) {
+      const speed = Math.hypot(ball.vx, ball.vy);
+      if (speed > maxSpeed) {
+        ball.vx = (ball.vx / speed) * maxSpeed;
+        ball.vy = (ball.vy / speed) * maxSpeed;
+      }
+    }
+
+    function resolveWall(ball, cx, cy, boundaryR, restitution) {
+      const dx = ball.x - cx;
+      const dy = ball.y - cy;
+      const dist = Math.hypot(dx, dy);
+      const maxDist = boundaryR - ball.r;
+      if (dist <= maxDist || dist === 0) return 0;
+
+      const nx = dx / dist;
+      const ny = dy / dist;
+      ball.x = cx + nx * maxDist;
+      ball.y = cy + ny * maxDist;
+
+      const dot = ball.vx * nx + ball.vy * ny;
+      if (dot > 0) {
+        ball.vx = (ball.vx - 2 * dot * nx) * restitution;
+        ball.vy = (ball.vy - 2 * dot * ny) * restitution;
+        return Math.abs(dot);
+      }
+      return 0;
+    }
+
+    function resolveBallPair(a, b, restitution) {
+      const dx = b.x - a.x;
+      const dy = b.y - a.y;
+      const dist = Math.hypot(dx, dy);
+      const minDist = a.r + b.r;
+      if (dist === 0 || dist >= minDist) return 0;
+
+      const nx = dx / dist;
+      const ny = dy / dist;
+      const overlap = minDist - dist;
+      a.x -= nx * overlap * 0.55;
+      a.y -= ny * overlap * 0.55;
+      b.x += nx * overlap * 0.55;
+      b.y += ny * overlap * 0.55;
+
+      const dvx = a.vx - b.vx;
+      const dvy = a.vy - b.vy;
+      const impact = dvx * nx + dvy * ny;
+      if (impact <= 0) return 0;
+
+      const impulse = impact * restitution;
+      a.vx -= impulse * nx;
+      a.vy -= impulse * ny;
+      b.vx += impulse * nx;
+      b.vy += impulse * ny;
+      return Math.abs(impact);
+    }
+
+    function applyDistributionForces(balls, cx, cy, boundaryR, mixPower) {
+      if (balls.length === 0 || mixPower <= 0) return;
+
+      const quadrants = [0, 0, 0, 0];
+      let sumX = 0;
+      let sumY = 0;
+
+      balls.forEach((ball) => {
+        sumX += ball.x;
+        sumY += ball.y;
+        const qx = ball.x >= cx ? 1 : 0;
+        const qy = ball.y >= cy ? 1 : 0;
+        quadrants[qx + qy * 2] += 1;
+      });
+
+      const target = balls.length / 4;
+      const driftX = sumX / balls.length - cx;
+      const driftY = sumY / balls.length - cy;
+
+      balls.forEach((ball) => {
+        const qx = ball.x >= cx ? 1 : 0;
+        const qy = ball.y >= cy ? 1 : 0;
+        const qIndex = qx + qy * 2;
+        const overcrowd = quadrants[qIndex] - target;
+
+        if (overcrowd > 1.5) {
+          ball.vx += (qx ? -1 : 1) * overcrowd * 0.018 * mixPower;
+          ball.vy += (qy ? -1 : 1) * overcrowd * 0.018 * mixPower;
+        }
+
+        ball.vx -= driftX * 0.016 * mixPower;
+        ball.vy -= driftY * 0.016 * mixPower;
+
+        const nx = (ball.x - cx) / boundaryR;
+        const ny = (ball.y - cy) / boundaryR;
+
+        if (ny > 0.25) ball.vy -= mixPower * 0.035 * (ny - 0.15);
+        if (ny < -0.25) ball.vy += mixPower * 0.035 * (-ny - 0.15);
+        if (nx > 0.25) ball.vx -= mixPower * 0.035 * (nx - 0.15);
+        if (nx < -0.25) ball.vx += mixPower * 0.035 * (-nx - 0.15);
+      });
+    }
+
+    function physicsSubstep(inDrumBalls, mixPower) {
+      const { cx, cy, boundaryR } = drumPhysics;
+      const wallRestitution = mixPower > 0 ? 0.9 : 0.75;
+      const ballRestitution = mixPower > 0 ? 0.92 : 0.82;
+      const friction = mixPower > 0 ? 0.997 : 0.992;
+      const maxSpeed = mixPower > 0 ? 10 : 5;
+      let bounceEnergy = 0;
+
+      if (mixPower > 0) {
+        drumPhysics.drumAngle += 0.03 * mixPower;
+        const gBase = 0.16 + mixPower * 0.028;
+        const a1 = drumPhysics.drumAngle;
+        const a2 = drumPhysics.drumAngle * 1.65 + 0.8;
+        const gx = (Math.sin(a1) + Math.sin(a2) * 0.45) * gBase;
+        const gy = (Math.cos(a1) + Math.cos(a2) * 0.45) * gBase;
+
+        inDrumBalls.forEach((ball) => {
+          ball.vx += gx * 0.2;
+          ball.vy += gy * 0.2;
+
+          if (Math.random() < 0.04 * mixPower) {
+            const jitterAngle = Math.random() * Math.PI * 2;
+            const jitterForce = mixPower * (1 + Math.random());
+            ball.vx += Math.cos(jitterAngle) * jitterForce;
+            ball.vy += Math.sin(jitterAngle) * jitterForce;
+          }
+        });
+
+        applyDistributionForces(inDrumBalls, cx, cy, boundaryR, mixPower);
+
+        if (drumPhysics.tickCount % 12 === 0) {
+          const kickCount = 3 + Math.floor(Math.random() * 3);
+          for (let k = 0; k < kickCount; k++) {
+            const ball = inDrumBalls[Math.floor(Math.random() * inDrumBalls.length)];
+            if (!ball) continue;
+            const kickAngle = Math.random() * Math.PI * 2;
+            const kickForce = mixPower * (1.2 + Math.random());
+            ball.vx += Math.cos(kickAngle) * kickForce;
+            ball.vy += Math.sin(kickAngle) * kickForce;
+          }
+        }
+      } else {
+        applyDistributionForces(inDrumBalls, cx, cy, boundaryR, 0.6);
+      }
+
+      inDrumBalls.forEach((ball) => {
+        ball.vx *= friction;
+        ball.vy *= friction;
+        ball.x += ball.vx * 0.42;
+        ball.y += ball.vy * 0.42;
+        clampSpeed(ball, maxSpeed);
+        bounceEnergy += resolveWall(ball, cx, cy, boundaryR, wallRestitution);
+      });
+
+      for (let pass = 0; pass < 2; pass++) {
+        for (let i = 0; i < inDrumBalls.length; i++) {
+          for (let j = i + 1; j < inDrumBalls.length; j++) {
+            bounceEnergy += resolveBallPair(inDrumBalls[i], inDrumBalls[j], ballRestitution);
+          }
+        }
+        inDrumBalls.forEach((ball) => {
+          bounceEnergy += resolveWall(ball, cx, cy, boundaryR, wallRestitution);
+        });
+      }
+
+      return bounceEnergy;
+    }
+
+    function stepDrumPhysics() {
+      const { balls, mixPower } = drumPhysics;
+      const inDrumBalls = balls.filter((b) => b.inDrum);
+      let totalBounce = 0;
+
+      for (let s = 0; s < 4; s++) {
+        totalBounce += physicsSubstep(inDrumBalls, mixPower);
+      }
+
+      if (mixPower > 0 && totalBounce > 3 && drumPhysics.tickCount - drumPhysics.lastBounceSound > 6) {
+        playMixTick();
+        drumPhysics.lastBounceSound = drumPhysics.tickCount;
+      }
+
+      balls.filter((b) => b.exiting).forEach((ball) => {
+        ball.x += ball.vx * 0.45;
+        ball.y += ball.vy * 0.45;
+        ball.vy += 0.4;
+        ball.opacity -= 0.035;
+        if (ball.opacity <= 0) {
+          ball.exiting = false;
+          ball.inDrum = false;
+        }
+      });
+
+      renderDrumFrame();
+      drumPhysics.tickCount++;
+    }
+
+    function startDrumLoop(power) {
+      drumPhysics.mixPower = power;
+      drumPhysics.mixing = power > 0;
+      setMixingUI(power > 0);
+
+      const needsLoop = power > 0 || drumPhysics.balls.some((b) => b.exiting);
+      if (!needsLoop) {
+        if (drumPhysics.animId) {
+          cancelAnimationFrame(drumPhysics.animId);
+          drumPhysics.animId = null;
+        }
+        renderDrumFrame();
+        return;
+      }
+
+      if (drumPhysics.animId) return;
+
+      const loop = () => {
+        stepDrumPhysics();
+        const keepGoing = drumPhysics.mixPower > 0 || drumPhysics.balls.some((b) => b.exiting);
+        if (keepGoing) {
+          drumPhysics.animId = requestAnimationFrame(loop);
+        } else {
+          drumPhysics.mixing = false;
+          setMixingUI(false);
+          drumPhysics.animId = null;
+        }
+      };
+      drumPhysics.animId = requestAnimationFrame(loop);
+    }
+
+    function stopDrumLoop() {
+      drumPhysics.mixPower = 0;
+      drumPhysics.mixing = false;
+      setMixingUI(false);
+      if (drumPhysics.balls.some((b) => b.exiting)) {
+        startDrumLoop(0);
+        return;
+      }
+      if (drumPhysics.animId) {
+        cancelAnimationFrame(drumPhysics.animId);
+        drumPhysics.animId = null;
+      }
+      renderDrumFrame();
+    }
+
+    function waitForMix(duration, power, pool) {
+      return new Promise((resolve) => {
+        const start = Date.now();
+        let tick = 0;
+        const tickChute = () => {
+          const fake = pool.length
+            ? pool[Math.floor(Math.random() * pool.length)]
+            : MIN + Math.floor(Math.random() * (MAX - MIN + 1));
+          setChuteNumber(fake, true);
+          if (tick % 4 === 0) playMixTick();
+          tick++;
+        };
+
+        startDrumLoop(power);
+        tickChute();
+        const interval = setInterval(tickChute, 70);
+
+        const check = () => {
+          if (Date.now() - start >= duration) {
+            clearInterval(interval);
+            stopDrumLoop();
+            renderDrumFrame();
+            resolve();
+            return;
+          }
+          requestAnimationFrame(check);
+        };
+        requestAnimationFrame(check);
+      });
+    }
+
+    function removeBallFromDrum(num) {
+      const ball = drumPhysics.balls.find((b) => b.num === num && b.inDrum);
+      if (!ball) return;
+      ball.inDrum = false;
+      ball.exiting = true;
+      ball.vx = (Math.random() - 0.5) * 2.2;
+      ball.vy = 3 + Math.random() * 1.5;
+      updateBallCountLabel();
+      startDrumLoop(0);
+    }
+
+    function initCanvas() {
+      drumPhysics.ctx = drumCanvas.getContext("2d");
+      drumPhysics.size = drumCanvas.width;
+      drumPhysics.cx = drumPhysics.size / 2;
+      drumPhysics.cy = drumPhysics.size / 2;
+    }
+
+    function buildResultRack() {
+      resultRack.innerHTML = "";
+      for (let i = 0; i < COUNT; i++) {
+        const slot = document.createElement("div");
+        slot.className = "rack-slot";
+        slot.dataset.index = i;
+        slot.textContent = "";
+        slot.setAttribute("aria-label", `${i + 1}번째 번호`);
+        resultRack.appendChild(slot);
+      }
+      const divider = document.createElement("span");
+      divider.className = "rack-divider";
+      divider.textContent = "+";
+      divider.setAttribute("aria-hidden", "true");
+      resultRack.appendChild(divider);
+      const bonusSlot = document.createElement("div");
+      bonusSlot.className = "rack-slot bonus";
+      bonusSlot.id = "bonusSlot";
+      bonusSlot.textContent = "";
+      bonusSlot.setAttribute("aria-label", "보너스 번호");
+      resultRack.appendChild(bonusSlot);
+    }
+
+    function resetDrawStage() {
+      drawStatus.textContent = "추첨기 준비 완료 · 1~45번 공 45개가 구체 안에 있습니다";
+      drawStatus.classList.remove("drawing");
+      chuteBall.textContent = "?";
+      chuteBall.className = "chute-ball";
+      resetAllDrumBalls();
+      buildResultRack();
+    }
+
+    function setChuteNumber(num, spinning = false) {
+      chuteBall.textContent = num;
+      chuteBall.className = `chute-ball zone-${getZone(num)}${spinning ? " spinning" : ""}`;
+    }
+
+    function fillSlot(slotEl, num) {
+      const isBonus = slotEl.id === "bonusSlot";
+      slotEl.textContent = num;
+      slotEl.className = `rack-slot zone-${getZone(num)} filled${isBonus ? " bonus" : ""}`;
+    }
+
+    async function pickNumberFromDrum(num, remaining, spinTime, fast) {
+      const power = fast ? 2.6 : 3.8;
+      startDrumLoop(power);
+
+      let tick = 0;
+      const chuteInterval = setInterval(() => {
+        const fake = remaining[Math.floor(Math.random() * remaining.length)] || num;
+        setChuteNumber(fake, true);
+        if (tick % 3 === 0) playMixTick();
+        tick++;
+      }, 65);
+
+      await sleep(spinTime);
+      clearInterval(chuteInterval);
+      stopDrumLoop();
+
+      removeBallFromDrum(num);
+      setChuteNumber(num, false);
+      chuteBall.classList.add("reveal");
+      if (!fast) playReveal();
+      await sleep(fast ? 200 : 450);
+      chuteBall.classList.remove("reveal");
+    }
+
+    async function sortMainSlots(slots, numbers) {
+      drawStatus.textContent = "당첨번호 정렬 중…";
+      await sleep(400);
+      numbers.forEach((num, i) => {
+        fillSlot(slots[i], num);
+      });
+      await sleep(300);
+    }
+
+    async function runLiveDraw({ fast = false } = {}) {
+      ensureAudio();
+      const { main, bonus, sorted } = drawFullSet();
+      const remaining = Array.from({ length: MAX - MIN + 1 }, (_, i) => i + MIN);
+      buildResultRack();
+      resetAllDrumBalls();
+
+      const slots = resultRack.querySelectorAll(".rack-slot:not(.bonus)");
+      const bonusSlot = document.getElementById("bonusSlot");
+      const drawOrder = [...main];
+      const spinTime = fast ? 500 : 1200;
+
+      drawStatus.textContent = "추첨기 가동 · 45개 공 혼합 중…";
+      drawStatus.classList.add("drawing");
+      await waitForMix(fast ? 800 : 1800, fast ? 2.8 : 4, remaining);
+
+      for (let i = 0; i < COUNT; i++) {
+        const num = drawOrder[i];
+        drawStatus.textContent = `${i + 1}번째 번호 추첨 · 구체에 ${remaining.length}개`;
+        await pickNumberFromDrum(num, remaining, spinTime, fast);
+        const idx = remaining.indexOf(num);
+        if (idx !== -1) remaining.splice(idx, 1);
+        fillSlot(slots[i], num);
+        chuteBall.textContent = "?";
+        chuteBall.className = "chute-ball";
+        await sleep(fast ? 150 : 350);
+      }
+
+      drawStatus.textContent = `보너스 번호 추첨 · 구체에 ${remaining.length}개`;
+      await pickNumberFromDrum(bonus, remaining, spinTime, fast);
+      fillSlot(bonusSlot, bonus);
+      await sleep(fast ? 200 : 350);
+
+      await sortMainSlots(slots, sorted);
+
+      drawStatus.textContent = `추첨 완료 · ${sorted.join(", ")} + ${bonus}`;
+      drawStatus.classList.remove("drawing");
+      if (!fast) playComplete();
+
+      return sorted;
+    }
+
+    function addToHistory(numbers) {
+      history.unshift(numbers);
+      if (history.length > 50) history.pop();
+      renderHistory();
+    }
+
+    function renderHistory() {
+      if (history.length === 0) {
+        historyList.innerHTML = "";
+        const li = document.createElement("li");
+        li.className = "empty-history";
+        li.id = "emptyHistory";
+        li.textContent = "아직 추첨 기록이 없습니다";
+        historyList.appendChild(li);
+        return;
+      }
+
+      historyList.innerHTML = "";
+      history.forEach((nums, index) => {
+        const li = document.createElement("li");
+        li.className = "history-item";
+
+        const idx = document.createElement("span");
+        idx.className = "history-index";
+        idx.textContent = `${history.length - index}.`;
+
+        const ballsWrap = document.createElement("div");
+        ballsWrap.className = "history-balls";
+        nums.forEach((num) => {
+          const ball = document.createElement("span");
+          ball.className = `history-ball zone-${getZone(num)}`;
+          ball.textContent = num;
+          ballsWrap.appendChild(ball);
+        });
+
+        li.appendChild(idx);
+        li.appendChild(ballsWrap);
+        historyList.appendChild(li);
+      });
+    }
+
+    function setControlsDisabled(disabled) {
+      drawBtn.disabled = disabled;
+      autoBtn.disabled = disabled;
+      clearBtn.disabled = disabled;
+    }
+
+    async function performDraw({ addHistory = true, fast = false } = {}) {
+      if (isDrawing) return null;
+      isDrawing = true;
+      setControlsDisabled(true);
+
+      const numbers = await runLiveDraw({ fast });
+
+      if (addHistory) {
+        addToHistory(numbers);
+      }
+
+      isDrawing = false;
+      setControlsDisabled(false);
+      return numbers;
+    }
+
+    drawBtn.addEventListener("click", () => {
+      ensureAudio();
+      performDraw({ fast: false });
+    });
+
+    autoBtn.addEventListener("click", async () => {
+      ensureAudio();
+      const count = Math.min(20, Math.max(1, parseInt(autoCountInput.value, 10) || 5));
+      autoCountInput.value = count;
+
+      for (let i = 0; i < count; i++) {
+        await performDraw({ fast: i > 0 });
+        if (i < count - 1) {
+          await sleep(300);
+        }
+      }
+    });
+
+    clearBtn.addEventListener("click", () => {
+      history = [];
+      renderHistory();
+      resetDrawStage();
+    });
+
+    initCanvas();
+    resetDrawStage();
+
+    autoCountInput.addEventListener("change", () => {
+      const val = parseInt(autoCountInput.value, 10);
+      if (Number.isNaN(val) || val < 1) autoCountInput.value = 1;
+      if (val > 20) autoCountInput.value = 20;
+    });
+
+    const tabDraw = document.getElementById("tabDraw");
+    const tabWinners = document.getElementById("tabWinners");
+    const panelDraw = document.getElementById("panelDraw");
+    const panelWinners = document.getElementById("panelWinners");
+    const winnerSearch = document.getElementById("winnerSearch");
+    const winnerSearchBtn = document.getElementById("winnerSearchBtn");
+    const winnersSummary = document.getElementById("winnersSummary");
+    const winnersList = document.getElementById("winnersList");
+    const loadMoreWrap = document.getElementById("loadMoreWrap");
+    const loadMoreBtn = document.getElementById("loadMoreBtn");
+
+    const allWinners = window.LOTTO_WINNERS || [];
+    const PAGE_SIZE = 30;
+    let filteredWinners = allWinners;
+    let visibleCount = PAGE_SIZE;
+
+    function switchTab(target) {
+      const isDraw = target === "draw";
+      tabDraw.classList.toggle("active", isDraw);
+      tabWinners.classList.toggle("active", !isDraw);
+      tabDraw.setAttribute("aria-selected", String(isDraw));
+      tabWinners.setAttribute("aria-selected", String(!isDraw));
+      panelDraw.classList.toggle("active", isDraw);
+      panelWinners.classList.toggle("active", !isDraw);
+    }
+
+    function formatPrize(amount) {
+      if (amount == null) return "당첨금 정보 없음";
+      const eok = Math.floor(amount / 100000000);
+      const man = Math.floor((amount % 100000000) / 10000);
+      if (eok > 0 && man > 0) return `${eok.toLocaleString("ko-KR")}억 ${man.toLocaleString("ko-KR")}만원`;
+      if (eok > 0) return `${eok.toLocaleString("ko-KR")}억원`;
+      return `${man.toLocaleString("ko-KR")}만원`;
+    }
+
+    function formatDate(dateStr) {
+      if (!dateStr) return "";
+      const [y, m, d] = dateStr.split("-");
+      if (!y || !m || !d) return dateStr;
+      return `${y}.${m}.${d}`;
+    }
+
+    function createHistoryBall(num, isBonus = false) {
+      const ball = document.createElement("span");
+      ball.className = `history-ball zone-${getZone(num)}${isBonus ? " bonus" : ""}`;
+      ball.textContent = num;
+      return ball;
+    }
+
+    function renderWinnerItem(record) {
+      const li = document.createElement("li");
+      li.className = "winner-item";
+
+      const meta = document.createElement("div");
+      meta.className = "winner-meta";
+
+      const round = document.createElement("span");
+      round.className = "winner-round";
+      round.textContent = `${record.n}회`;
+
+      const date = document.createElement("span");
+      date.className = "winner-date";
+      date.textContent = formatDate(record.date);
+
+      meta.appendChild(round);
+      meta.appendChild(date);
+
+      const numbers = document.createElement("div");
+      numbers.className = "winner-numbers";
+      record.nums.forEach((num) => numbers.appendChild(createHistoryBall(num)));
+
+      const bonusLabel = document.createElement("span");
+      bonusLabel.className = "bonus-label";
+      bonusLabel.textContent = "+";
+      numbers.appendChild(bonusLabel);
+      numbers.appendChild(createHistoryBall(record.bonus, true));
+
+      const prizeLine = document.createElement("div");
+      const prize = document.createElement("span");
+      prize.className = `winner-prize${record.prize == null ? " muted" : ""}`;
+      prize.textContent = formatPrize(record.prize);
+
+      if (record.winners != null) {
+        const winners = document.createElement("span");
+        winners.className = "winner-winners";
+        winners.textContent = `· ${record.winners}명`;
+        prize.appendChild(winners);
+      }
+
+      prizeLine.appendChild(prize);
+
+      li.appendChild(meta);
+      li.appendChild(numbers);
+      li.appendChild(prizeLine);
+      return li;
+    }
+
+    function renderWinnersList() {
+      winnersList.innerHTML = "";
+      const slice = filteredWinners.slice(0, visibleCount);
+
+      if (slice.length === 0) {
+        const empty = document.createElement("li");
+        empty.className = "empty-history";
+        empty.textContent = "검색 결과가 없습니다";
+        winnersList.appendChild(empty);
+      } else {
+        slice.forEach((record) => winnersList.appendChild(renderWinnerItem(record)));
+      }
+
+      const latest = allWinners[0];
+      winnersSummary.textContent = filteredWinners.length === allWinners.length
+        ? `총 ${allWinners.length}회 · 최신 ${latest.n}회 (${formatDate(latest.date)})`
+        : `검색 결과 ${filteredWinners.length}건`;
+
+      loadMoreWrap.classList.toggle("hidden", visibleCount >= filteredWinners.length);
+    }
+
+    function filterWinners() {
+      const query = winnerSearch.value.trim();
+      if (!query) {
+        filteredWinners = allWinners;
+      } else {
+        const round = parseInt(query, 10);
+        if (Number.isNaN(round)) {
+          filteredWinners = [];
+        } else {
+          filteredWinners = allWinners.filter((item) => item.n === round);
+        }
+      }
+      visibleCount = PAGE_SIZE;
+      renderWinnersList();
+    }
+
+    tabDraw.addEventListener("click", () => switchTab("draw"));
+    tabWinners.addEventListener("click", () => switchTab("winners"));
+    winnerSearchBtn.addEventListener("click", filterWinners);
+    winnerSearch.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") filterWinners();
+    });
+    winnerSearch.addEventListener("search", filterWinners);
+    loadMoreBtn.addEventListener("click", () => {
+      visibleCount += PAGE_SIZE;
+      renderWinnersList();
+    });
+
+    renderWinnersList();
+  </script>
+</body>
+</html>
