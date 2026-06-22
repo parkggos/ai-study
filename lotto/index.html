@@ -1347,7 +1347,7 @@
 
   <footer class="footer-section"><div class="footer-inner">한국 로또 6/45 · 데이터: smok95/lotto (동행복권 공개 정보 기반, 1~1229회)</div></footer>
 
-  <script src="winners-data.js"></script>
+  <script src="/lotto/winners-data.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
   <script>
     const MIN = 1;
@@ -1366,6 +1366,32 @@
     const clearBtn = document.getElementById("clearBtn");
     const autoCountInput = document.getElementById("autoCount");
     const historyList = document.getElementById("historyList");
+    const chatMessages = document.getElementById("chatMessages");
+    const chatInput = document.getElementById("chatInput");
+    const chatSendBtn = document.getElementById("chatSendBtn");
+    const chatResetBtn = document.getElementById("chatResetBtn");
+
+    function scrollChatToBottom() {
+      if (!chatMessages) return;
+      requestAnimationFrame(() => {
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+      });
+    }
+
+    function appendChatMessage(type, content, extraNode = null) {
+      if (!chatMessages) return null;
+      const msg = document.createElement("div");
+      msg.className = `chat-msg ${type}`;
+      if (typeof content === "string") {
+        msg.textContent = content;
+      } else if (content) {
+        msg.appendChild(content);
+      }
+      if (extraNode) msg.appendChild(extraNode);
+      chatMessages.appendChild(msg);
+      scrollChatToBottom();
+      return msg;
+    }
 
     let isDrawing = false;
     let history = [];
@@ -2758,10 +2784,17 @@
 
     analyzeDrawBtn.addEventListener("click", () => {
       ensureAudio();
+      lockSajuPanelHeight();
       const analyzed = analyzeHistoricalDraw();
-      const analysisNote = analyzed.analysis
-        ? `역대 ${analyzed.analysis.totalDraws}회 분석 · `
-        : "";
+      if (!analyzed.analysis) {
+        appendChatMessage(
+          "error",
+          "역대 당첨 데이터를 불러오지 못했습니다. 페이지를 새로고침한 뒤 다시 시도해 주세요."
+        );
+        return;
+      }
+      appendChatMessage("user", "역대 당첨 데이터로 분석 추첨해 주세요.");
+      const analysisNote = `역대 ${analyzed.analysis.totalDraws}회 분석 · `;
       performDraw({
         fast: false,
         preset: { numbers: analyzed.main, bonus: analyzed.bonus },
@@ -2948,10 +2981,6 @@
 
     const drawColumn = document.querySelector(".draw-column");
     const sajuSection = document.querySelector(".saju-section");
-    const chatMessages = document.getElementById("chatMessages");
-    const chatInput = document.getElementById("chatInput");
-    const chatSendBtn = document.getElementById("chatSendBtn");
-    const chatResetBtn = document.getElementById("chatResetBtn");
     const sajuBirthDate = document.getElementById("sajuBirthDate");
     let sajuChatStarted = false;
     let sajuPanelHeightPx = 0;
@@ -3015,20 +3044,6 @@
       const gender = document.querySelector('input[name="sajuGender"]:checked')?.value;
       const birthDate = sajuBirthDate.value;
       return { gender, birthDate };
-    }
-
-    function appendChatMessage(type, content, extraNode = null) {
-      const msg = document.createElement("div");
-      msg.className = `chat-msg ${type}`;
-      if (typeof content === "string") {
-        msg.textContent = content;
-      } else if (content) {
-        msg.appendChild(content);
-      }
-      if (extraNode) msg.appendChild(extraNode);
-      chatMessages.appendChild(msg);
-      chatMessages.scrollTop = chatMessages.scrollHeight;
-      return msg;
     }
 
     function getSajuReason(recommendation, num) {
