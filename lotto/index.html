@@ -1739,6 +1739,38 @@
       });
     }
 
+    function injectDrumMixEnergy(mixPower) {
+      drumPhysics.balls
+        .filter((b) => b.inDrum)
+        .forEach((ball) => {
+          ball.vy += 0.055 + Math.random() * 0.09;
+          ball.vx += (Math.random() - 0.5) * 0.14;
+          ball.vz += (Math.random() - 0.5) * 0.14;
+        });
+    }
+
+    function runFallPhysicsSubstep(inDrumBalls) {
+      const { boundaryR, gravity } = drumPhysics;
+      const wallRestitution = 0.82;
+      const ballRestitution = 0.76;
+      const friction = 0.988;
+      const maxSpeed = 0.38;
+      const dt = SUBSTEP_DT;
+
+      inDrumBalls.forEach((ball) => {
+        ball.vy -= gravity * STEP_SCALE * 2.2;
+        ball.vx *= friction;
+        ball.vy *= friction;
+        ball.vz *= friction;
+        ball.x += ball.vx * dt;
+        ball.y += ball.vy * dt;
+        ball.z += ball.vz * dt;
+        clampSpeed(ball, maxSpeed);
+      });
+
+      return resolveAllCollisions(inDrumBalls, boundaryR, wallRestitution, ballRestitution, 4);
+    }
+
     function animateDrumCollapse() {
       return new Promise((resolve) => {
         const inDrumBalls = drumPhysics.balls.filter((b) => b.inDrum);
@@ -1757,27 +1789,33 @@
         }
 
         let frames = 0;
-        const maxFrames = 200;
+        const maxFrames = 220;
+        let settleFrames = 0;
 
         const loop = () => {
-          for (let s = 0; s < 4; s++) {
-            runIdlePhysicsSubstep(inDrumBalls, 3);
+          let bounceEnergy = 0;
+          for (let s = 0; s < 5; s++) {
+            bounceEnergy += runFallPhysicsSubstep(inDrumBalls);
           }
           renderDrumFrame();
           frames++;
+
+          if (bounceEnergy > 0.08) {
+            settleFrames = 0;
+            if (frames % 8 === 0) playMixTick();
+          } else {
+            settleFrames++;
+          }
 
           const maxSpeed = inDrumBalls.reduce(
             (peak, ball) => Math.max(peak, Math.hypot(ball.vx, ball.vy, ball.vz)),
             0
           );
 
-          if (frames >= maxFrames || (frames > 18 && maxSpeed < 0.06)) {
-            inDrumBalls.forEach((ball) => {
-              ball.vx = 0;
-              ball.vy = 0;
-              ball.vz = 0;
-            });
-            renderDrumFrame();
+          if (
+            frames >= maxFrames ||
+            (frames > 28 && settleFrames > 14 && maxSpeed < 0.035)
+          ) {
             drumPhysics.animId = null;
             resolve();
             return;
@@ -1788,6 +1826,11 @@
 
         drumPhysics.animId = requestAnimationFrame(loop);
       });
+    }
+
+    async function showTowerStackPause(fast = false) {
+      renderDrumFrame();
+      await sleep(fast ? 320 : 620);
     }
 
     function settleRemainingBalls() {
@@ -2022,26 +2065,28 @@
 
     function runMixingPhysicsSubstep(inDrumBalls, mixPower) {
       const { boundaryR } = drumPhysics;
-      const wallRestitution = 0.72;
-      const ballRestitution = 0.68;
-      const friction = 0.992;
-      const maxSpeed = 0.54 * (VISUAL_SPEED / 0.32);
+      const wallRestitution = 0.84;
+      const ballRestitution = 0.8;
+      const friction = 0.994;
+      const maxSpeed = 0.44;
       const dt = SUBSTEP_DT;
       let bounceEnergy = 0;
 
       drumPhysics.mixTime += STEP_SCALE;
-      const gStrength = (0.014 + mixPower * 0.006) * STEP_SCALE;
-      const shake = gStrength * 0.28;
-      const tiltX = Math.sin(drumPhysics.mixTime * 2.4) * shake;
-      const tiltZ = Math.cos(drumPhysics.mixTime * 1.9) * shake;
+      const gStrength = (0.018 + mixPower * 0.0075) * STEP_SCALE;
+      const shake = gStrength * 0.42;
+      const tiltX = Math.sin(drumPhysics.mixTime * 2.8) * shake;
+      const tiltZ = Math.cos(drumPhysics.mixTime * 2.2) * shake;
 
       inDrumBalls.forEach((ball) => {
-        ball.vy -= gStrength * 1.35;
+        ball.vy -= gStrength * 1.5;
         ball.vx += tiltX;
         ball.vz += tiltZ;
 
-        if (ball.y < -0.42 && Math.random() < 0.0022 * mixPower) {
-          ball.vy += mixPower * 0.0055 * STEP_SCALE;
+        if (ball.y < -0.38 && Math.random() < 0.009 * mixPower) {
+          ball.vy += mixPower * 0.009 * STEP_SCALE;
+          ball.vx += (Math.random() - 0.5) * 0.018;
+          ball.vz += (Math.random() - 0.5) * 0.018;
         }
       });
 
@@ -2053,10 +2098,9 @@
         ball.y += ball.vy * dt;
         ball.z += ball.vz * dt;
         clampSpeed(ball, maxSpeed);
-        dampTinyVelocity(ball);
       });
 
-      bounceEnergy += resolveAllCollisions(inDrumBalls, boundaryR, wallRestitution, ballRestitution, 2);
+      bounceEnergy += resolveAllCollisions(inDrumBalls, boundaryR, wallRestitution, ballRestitution, 3);
       return bounceEnergy;
     }
 
@@ -2071,13 +2115,13 @@
       const { balls, mixPower } = drumPhysics;
       const inDrumBalls = balls.filter((b) => b.inDrum);
       let totalBounce = 0;
-      const substeps = mixPower > 0 ? 4 : 2;
+      const substeps = mixPower > 0 ? 5 : 2;
 
       for (let s = 0; s < substeps; s++) {
         totalBounce += physicsSubstep(inDrumBalls, mixPower);
       }
 
-      if (mixPower > 0 && totalBounce > 0.12 && drumPhysics.tickCount - drumPhysics.lastBounceSound > 6) {
+      if (mixPower > 0 && totalBounce > 0.05 && drumPhysics.tickCount - drumPhysics.lastBounceSound > 5) {
         playMixTick();
         drumPhysics.lastBounceSound = drumPhysics.tickCount;
       }
@@ -2140,12 +2184,13 @@
 
     async function mixForDuration(duration, power) {
       clearChuteBall();
+      injectDrumMixEnergy(power);
       ensureDrumMixing(power);
       let tick = 0;
       const mixInterval = setInterval(() => {
-        if (tick % 4 === 0) playMixTick();
+        if (tick % 3 === 0) playMixTick();
         tick++;
-      }, 70);
+      }, 55);
       await sleep(duration);
       clearInterval(mixInterval);
     }
@@ -2355,35 +2400,35 @@
       }
 
       buildResultRack();
-      if (!continueMixing) {
-        stackAllDrumBalls();
-      }
-
+      const prefix = statusPrefix ? `${statusPrefix} · ` : "";
       const slots = resultRack.querySelectorAll(".rack-slot:not(.bonus)");
       const bonusSlot = document.getElementById("bonusSlot");
       const drawOrder = shuffleArray(main);
       const spinTime = fast ? 500 : 1200;
       const mixPower = fast ? 2.8 : 3.8;
-      const prefix = statusPrefix ? `${statusPrefix} · ` : "";
 
-      drawStatus.textContent = `${prefix}${analysisNote}추첨기 가동 · 공이 바닥으로 떨어지며 혼합됩니다…`;
-      drawStatus.classList.add("drawing");
-      clearChuteBall();
+      if (!continueMixing) {
+        stackAllDrumBalls();
+        drawStatus.textContent = `${prefix}${analysisNote}추첨기 가동 · 공이 쌓입니다…`;
+        drawStatus.classList.add("drawing");
+        clearChuteBall();
+        await showTowerStackPause(fast);
+      } else {
+        drawStatus.textContent = `${prefix}${analysisNote}추첨기 혼합 중 · 45개 공`;
+        drawStatus.classList.add("drawing");
+        clearChuteBall();
+      }
 
       if (sajuContext) {
         appendSajuProfileIntro(sajuContext.profile, sajuContext.recommendation);
       }
 
       if (!continueMixing) {
-        if (fast) {
-          await animateDrumCollapse();
-        } else {
-          drawStatus.textContent = `${prefix}${analysisNote}추첨기 가동 · 쌓인 공이 바닥으로 떨어집니다…`;
-          await animateDrumCollapse();
-        }
+        drawStatus.textContent = `${prefix}${analysisNote}추첨기 가동 · 쌓인 공이 바닥으로 떨어집니다…`;
+        await animateDrumCollapse();
       }
 
-      drawStatus.textContent = `${prefix}${analysisNote}추첨기 혼합 중 · 45개 공`;
+      drawStatus.textContent = `${prefix}${analysisNote}추첨기 혼합 중 · 공이 튀며 섞입니다`;
       await mixForDuration(continueMixing ? (fast ? 400 : 800) : fast ? 800 : 1800, mixPower);
 
       for (let i = 0; i < COUNT; i++) {
@@ -2903,22 +2948,34 @@
       stackAllDrumBalls();
       buildResultRack();
       clearChuteBall();
-      drawStatus.textContent = "사주 분석 중 · 추첨기 혼합 중…";
+      drawStatus.textContent = "사주 분석 중 · 공이 쌓입니다…";
       drawStatus.classList.add("drawing");
 
-      animateDrumCollapse().then(() => {
-        if (drawStatus.classList.contains("drawing")) {
-          startDrumLoop(3.4);
-        }
-      });
+      let mixInterval = null;
+      const startMixLoop = () => {
+        injectDrumMixEnergy(3.4);
+        startDrumLoop(3.4);
+        let tick = 0;
+        mixInterval = setInterval(() => {
+          if (tick % 3 === 0) playMixTick();
+          tick++;
+        }, 55);
+      };
 
-      let tick = 0;
-      const mixInterval = setInterval(() => {
-        if (tick % 4 === 0) playMixTick();
-        tick++;
-      }, 70);
+      showTowerStackPause(false)
+        .then(() => {
+          drawStatus.textContent = "사주 분석 중 · 공이 바닥으로 떨어집니다…";
+          return animateDrumCollapse();
+        })
+        .then(() => {
+          if (!drawStatus.classList.contains("drawing")) return;
+          drawStatus.textContent = "사주 분석 중 · 추첨기 혼합 중…";
+          startMixLoop();
+        });
 
-      return () => clearInterval(mixInterval);
+      return () => {
+        if (mixInterval) clearInterval(mixInterval);
+      };
     }
 
     function stopSajuAnalysisMix() {
