@@ -275,8 +275,10 @@
 
     .globe-housing {
       position: relative;
-      width: min(300px, 88vw);
-      height: min(300px, 88vw);
+      width: 300px;
+      height: 300px;
+      max-width: 100%;
+      flex-shrink: 0;
     }
 
     .globe-housing.agitating {
@@ -455,26 +457,34 @@
       font-weight: 700;
       background: radial-gradient(circle at 32% 28%, #eee, #bbb 100%);
       color: var(--stone);
-      transition: transform 0.15s;
+      transition: opacity 0.2s, transform 0.2s;
     }
 
-    .chute-ball.spinning {
-      animation: chutePulse 0.09s ease infinite alternate;
+    .chute-ball.empty {
+      opacity: 0;
+      visibility: hidden;
+      transform: translateY(-14px) scale(0.35);
     }
 
     .chute-ball.reveal {
-      animation: chuteDrop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+      visibility: visible;
+      opacity: 1;
+      animation: chuteRollOut 0.65s cubic-bezier(0.22, 1.1, 0.36, 1);
     }
 
-    @keyframes chutePulse {
-      from { transform: scale(0.92); }
-      to { transform: scale(1.06); }
-    }
-
-    @keyframes chuteDrop {
-      0% { transform: translateY(-18px) scale(0.55); opacity: 0.5; }
-      60% { transform: translateY(3px) scale(1.08); }
-      100% { transform: translateY(0) scale(1); opacity: 1; }
+    @keyframes chuteRollOut {
+      0% {
+        opacity: 0;
+        transform: translateY(-28px) scale(0.45) rotate(-18deg);
+      }
+      55% {
+        opacity: 1;
+        transform: translateY(4px) scale(1.06) rotate(6deg);
+      }
+      100% {
+        opacity: 1;
+        transform: translateY(0) scale(1) rotate(0deg);
+      }
     }
 
     .chute-ball.zone-1,
@@ -1121,8 +1131,8 @@
       }
 
       .globe-housing {
-        width: min(360px, 100%);
-        height: min(360px, 100%);
+        width: 360px;
+        height: 360px;
       }
 
       .machine-stand {
@@ -1147,8 +1157,8 @@
 
     @media (max-width: 480px) {
       .globe-housing {
-        width: min(260px, 88vw);
-        height: min(260px, 88vw);
+        width: 260px;
+        height: 260px;
       }
 
       .stand-base {
@@ -1194,7 +1204,7 @@
                   <div class="exit-arm">
                     <div class="exit-neck" aria-hidden="true"></div>
                     <div class="display-tube">
-                      <div class="chute-ball" id="chuteBall">?</div>
+                      <div class="chute-ball empty" id="chuteBall"></div>
                     </div>
                   </div>
                   <div class="stand-base" aria-hidden="true"></div>
@@ -1816,22 +1826,17 @@
       return new Promise((resolve) => {
         const start = Date.now();
         let tick = 0;
-        const tickChute = () => {
-          const fake = pool.length
-            ? pool[Math.floor(Math.random() * pool.length)]
-            : MIN + Math.floor(Math.random() * (MAX - MIN + 1));
-          setChuteNumber(fake, true);
+        clearChuteBall();
+        startDrumLoop(power);
+
+        const mixInterval = setInterval(() => {
           if (tick % 4 === 0) playMixTick();
           tick++;
-        };
-
-        startDrumLoop(power);
-        tickChute();
-        const interval = setInterval(tickChute, 70);
+        }, 70);
 
         const check = () => {
           if (Date.now() - start >= duration) {
-            clearInterval(interval);
+            clearInterval(mixInterval);
             stopDrumLoop();
             renderDrumFrame();
             resolve();
@@ -1855,30 +1860,35 @@
       startDrumLoop(0);
     }
 
+    function getDrumViewportSize() {
+      const viewport = drumPhysics.viewport || drumViewport;
+      if (!viewport) return 300;
+      const size = Math.min(viewport.clientWidth, viewport.clientHeight);
+      return Math.max(Math.round(size), 1) || 300;
+    }
+
     function onDrumResize() {
       const { viewport, camera, renderer } = drumPhysics;
       if (!viewport || !renderer) return;
-      const width = viewport.clientWidth || 300;
-      const height = viewport.clientHeight || 300;
-      camera.aspect = width / height;
+      const size = getDrumViewportSize();
+      camera.aspect = 1;
       camera.updateProjectionMatrix();
-      renderer.setSize(width, height);
+      renderer.setSize(size, size);
       renderDrumFrame();
     }
 
     function initCanvas() {
       const viewport = drumViewport;
-      const width = viewport.clientWidth || 300;
-      const height = viewport.clientHeight || 300;
+      const size = getDrumViewportSize();
 
       const scene = new THREE.Scene();
-      const camera = new THREE.PerspectiveCamera(42, width / height, 0.1, 100);
+      const camera = new THREE.PerspectiveCamera(42, 1, 0.1, 100);
       camera.position.set(0.15, 0.35, 2.75);
       camera.lookAt(0, -0.05, 0);
 
       const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
       renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-      renderer.setSize(width, height);
+      renderer.setSize(size, size);
       renderer.setClearColor(0x000000, 0);
       renderer.outputColorSpace = THREE.SRGBColorSpace;
       viewport.appendChild(renderer.domElement);
@@ -1943,18 +1953,23 @@
       resultRack.appendChild(bonusSlot);
     }
 
+    function clearChuteBall() {
+      chuteBall.textContent = "";
+      chuteBall.className = "chute-ball empty";
+    }
+
+    function revealChuteNumber(num, playSound = true) {
+      chuteBall.textContent = num;
+      chuteBall.className = `chute-ball zone-${getZone(num)} reveal`;
+      if (playSound) playReveal();
+    }
+
     function resetDrawStage() {
       drawStatus.textContent = "추첨기 준비 완료 · 1~45번 공 45개가 구체 안에 있습니다";
       drawStatus.classList.remove("drawing");
-      chuteBall.textContent = "?";
-      chuteBall.className = "chute-ball";
+      clearChuteBall();
       resetAllDrumBalls();
       buildResultRack();
-    }
-
-    function setChuteNumber(num, spinning = false) {
-      chuteBall.textContent = num;
-      chuteBall.className = `chute-ball zone-${getZone(num)}${spinning ? " spinning" : ""}`;
     }
 
     function fillSlot(slotEl, num) {
@@ -1965,25 +1980,22 @@
 
     async function pickNumberFromDrum(num, remaining, spinTime, fast) {
       const power = fast ? 2.6 : 3.8;
+      clearChuteBall();
       startDrumLoop(power);
 
       let tick = 0;
-      const chuteInterval = setInterval(() => {
-        const fake = remaining[Math.floor(Math.random() * remaining.length)] || num;
-        setChuteNumber(fake, true);
+      const mixInterval = setInterval(() => {
         if (tick % 3 === 0) playMixTick();
         tick++;
       }, 65);
 
       await sleep(spinTime);
-      clearInterval(chuteInterval);
+      clearInterval(mixInterval);
       stopDrumLoop();
 
       removeBallFromDrum(num);
-      setChuteNumber(num, false);
-      chuteBall.classList.add("reveal");
-      if (!fast) playReveal();
-      await sleep(fast ? 200 : 450);
+      revealChuteNumber(num, !fast);
+      await sleep(fast ? 280 : 520);
       chuteBall.classList.remove("reveal");
     }
 
@@ -2031,6 +2043,7 @@
 
       drawStatus.textContent = `${prefix}추첨기 가동 · 45개 공 혼합 중…`;
       drawStatus.classList.add("drawing");
+      clearChuteBall();
       await waitForMix(fast ? 800 : 1800, fast ? 2.8 : 4, remaining);
 
       for (let i = 0; i < COUNT; i++) {
@@ -2040,8 +2053,7 @@
         const idx = remaining.indexOf(num);
         if (idx !== -1) remaining.splice(idx, 1);
         fillSlot(slots[i], num);
-        chuteBall.textContent = "?";
-        chuteBall.className = "chute-ball";
+        clearChuteBall();
         await sleep(fast ? 150 : 350);
       }
 
@@ -2390,27 +2402,24 @@
       ensureAudio();
       resetAllDrumBalls();
       buildResultRack();
+      clearChuteBall();
       drawStatus.textContent = "사주 분석 중 · 추첨기 혼합 중…";
       drawStatus.classList.add("drawing");
 
-      const pool = Array.from({ length: MAX - MIN + 1 }, (_, i) => i + MIN);
       startDrumLoop(3.4);
 
       let tick = 0;
-      const chuteInterval = setInterval(() => {
-        const fake = pool[Math.floor(Math.random() * pool.length)];
-        setChuteNumber(fake, true);
+      const mixInterval = setInterval(() => {
         if (tick % 4 === 0) playMixTick();
         tick++;
       }, 70);
 
-      return () => clearInterval(chuteInterval);
+      return () => clearInterval(mixInterval);
     }
 
     function stopSajuAnalysisMix() {
       stopDrumLoop();
-      chuteBall.textContent = "?";
-      chuteBall.className = "chute-ball";
+      clearChuteBall();
     }
 
     const SAJU_API_URL = `${window.location.origin}/api/saju-lotto`;
