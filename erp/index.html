@@ -898,15 +898,29 @@
 
     .dashboard-list-table thead th {
       position: sticky;
-      top: var(--sticky-chrome-top, 128px);
+      top: calc(var(--sticky-chrome-top, 128px) - 2px);
       z-index: 35;
       background: var(--bg);
       box-shadow: inset 0 -1px 0 var(--border);
     }
 
+    .dashboard-list-table thead th::before {
+      content: "";
+      position: absolute;
+      left: 0;
+      right: 0;
+      top: -6px;
+      height: 6px;
+      background: var(--bg);
+    }
+
     .dashboard-list-table.thead-scroll thead th {
       position: static;
       box-shadow: none;
+    }
+
+    .dashboard-list-table.thead-scroll thead th::before {
+      display: none;
     }
 
     .stock-risk-table th.num,
@@ -2584,8 +2598,8 @@
     function updateStickyChromeTop() {
       const nav = document.querySelector(".sidebar");
       const topbar = document.querySelector(".topbar");
-      const navH = nav?.offsetHeight ?? 60;
-      const topbarH = topbar?.offsetHeight ?? 72;
+      const navH = Math.ceil(nav?.getBoundingClientRect().height ?? nav?.offsetHeight ?? 60);
+      const topbarH = Math.ceil(topbar?.offsetHeight ?? 72);
       document.documentElement.style.setProperty("--nav-height", `${navH}px`);
       document.documentElement.style.setProperty("--sticky-chrome-top", `${navH + topbarH}px`);
       scheduleDashboardListStickyHeaders();
@@ -2597,6 +2611,7 @@
       const chromeTop = parseFloat(
         getComputedStyle(document.documentElement).getPropertyValue("--sticky-chrome-top")
       ) || 128;
+      const stickyTop = chromeTop - 2;
 
       document.querySelectorAll(".dashboard-list-table").forEach((wrap) => {
         const thead = wrap.querySelector("thead");
@@ -2606,7 +2621,7 @@
           return;
         }
 
-        const headerBottom = chromeTop + thead.getBoundingClientRect().height;
+        const headerBottom = stickyTop + thead.getBoundingClientRect().height;
         const rowsBelowHeader = rows.filter((row) => row.getBoundingClientRect().bottom > headerBottom + 1);
         wrap.classList.toggle("thead-scroll", rowsBelowHeader.length === 1);
       });
