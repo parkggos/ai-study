@@ -40,31 +40,35 @@
       color: var(--text);
       line-height: 1.5;
       min-height: 100vh;
+      overflow-x: hidden;
     }
 
     .app {
       display: flex;
+      flex-direction: column;
       min-height: 100vh;
+      min-width: 0;
     }
 
-    /* Sidebar */
+    /* Top navigation */
     .sidebar {
-      width: 240px;
+      width: 100%;
       background: var(--sidebar-bg);
       color: var(--sidebar-text);
       display: flex;
-      flex-direction: column;
+      flex-direction: row;
+      align-items: center;
+      flex-wrap: wrap;
       flex-shrink: 0;
-      position: fixed;
+      position: sticky;
       top: 0;
-      left: 0;
-      bottom: 0;
       z-index: 100;
     }
 
     .sidebar-brand {
-      padding: 24px 20px;
-      border-bottom: 1px solid #1e293b;
+      padding: 14px 20px;
+      border-right: 1px solid #1e293b;
+      flex-shrink: 0;
     }
 
     .sidebar-brand h1 {
@@ -81,15 +85,18 @@
     }
 
     .nav {
-      padding: 16px 12px;
+      display: flex;
       flex: 1;
+      flex-wrap: wrap;
+      gap: 4px;
+      padding: 8px 12px;
     }
 
     .nav-item {
       display: flex;
       align-items: center;
       gap: 10px;
-      width: 100%;
+      width: auto;
       padding: 10px 12px;
       border: none;
       background: none;
@@ -101,7 +108,7 @@
       cursor: pointer;
       text-align: left;
       transition: background 0.15s, color 0.15s;
-      margin-bottom: 4px;
+      margin-bottom: 0;
     }
 
     .nav-item:hover {
@@ -126,8 +133,8 @@
     /* Main */
     .main {
       flex: 1;
-      margin-left: 240px;
-      min-height: 100vh;
+      min-width: 0;
+      min-height: 0;
     }
 
     .topbar {
@@ -154,6 +161,9 @@
     .content {
       padding: 28px 32px 48px;
       max-width: 1400px;
+      width: 100%;
+      margin: 0 auto;
+      min-width: 0;
     }
 
     .panel { display: none; }
@@ -1046,27 +1056,28 @@
     }
 
     @media (max-width: 768px) {
-      .sidebar {
-        width: 100%;
-        position: relative;
-        flex-direction: row;
-        flex-wrap: wrap;
+      .sidebar-brand {
+        flex: 1;
+        min-width: 0;
+        border-right: none;
+        border-bottom: 1px solid #1e293b;
       }
 
-      .sidebar-brand { flex: 1; min-width: 160px; }
       .nav {
-        display: flex;
-        flex-wrap: wrap;
-        padding: 8px;
         width: 100%;
+        padding: 8px;
       }
 
-      .nav-item { flex: 1; min-width: 120px; justify-content: center; font-size: 13px; }
+      .nav-item {
+        flex: 1;
+        min-width: 0;
+        justify-content: center;
+        font-size: 13px;
+      }
+
       .kpi-grid { grid-template-columns: 1fr; }
-      .main { margin-left: 0; }
       .content { padding: 20px 16px 32px; }
       .topbar { padding: 14px 16px; }
-      .app { flex-direction: column; }
     }
   </style>
 </head>
@@ -1191,10 +1202,7 @@
                 <div id="listCustomers"></div>
               </div>
               <div class="chart-card full">
-                <div class="card-title-row">
-                  <div class="card-title">재고 위험 품목</div>
-                  <span id="listStockRiskStatus"></span>
-                </div>
+                <div class="card-title">재고 위험 품목</div>
                 <div id="listStockRisk"></div>
               </div>
             </div>
@@ -2114,15 +2122,10 @@
       renderCustomerRankTable(m.customerTop10);
 
       if (!m.hasProducts) {
-        document.getElementById("listStockRiskStatus").innerHTML = "";
         document.getElementById("listStockRisk").innerHTML = '<div class="rank-empty">상품 데이터를 업로드하세요</div>';
       } else if (!m.stockRiskItems.length) {
-        document.getElementById("listStockRiskStatus").innerHTML = statusText("normal");
         document.getElementById("listStockRisk").innerHTML = '<div class="rank-empty">재고 위험 품목 없음</div>';
       } else {
-        const stockStatuses = m.stockRiskItems.map((item) => item.rowStatus);
-        document.getElementById("listStockRiskStatus").innerHTML =
-          statusText(aggregateStatus(stockStatuses));
         renderStockRiskTable(m.stockRiskItems);
       }
     }
