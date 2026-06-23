@@ -972,6 +972,49 @@
     }
 
     /* Report */
+    .dashboard-toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 16px;
+      align-items: center;
+      justify-content: flex-end;
+    }
+
+    .chart-3d-toggle {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-muted);
+      cursor: pointer;
+      user-select: none;
+      padding: 8px 12px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--card);
+      transition: border-color 0.15s, color 0.15s, background 0.15s;
+    }
+
+    .chart-3d-toggle:hover {
+      border-color: #cbd5e1;
+      color: var(--text);
+    }
+
+    .chart-3d-toggle:has(input:checked) {
+      border-color: var(--primary);
+      background: var(--primary-light);
+      color: var(--primary);
+    }
+
+    .chart-3d-toggle input {
+      width: 15px;
+      height: 15px;
+      accent-color: var(--primary);
+      cursor: pointer;
+    }
+
     .report-toolbar {
       display: flex;
       flex-wrap: wrap;
@@ -1222,6 +1265,12 @@
             <p>주문·주문상세 데이터를 업로드하면 대시보드 KPI와 차트가 표시됩니다.</p>
           </div>
           <div id="dashboardContent" style="display:none;">
+            <div class="dashboard-toolbar">
+              <label class="chart-3d-toggle" for="toggleChart3d">
+                <input type="checkbox" id="toggleChart3d" />
+                <span>3D 그래프</span>
+              </label>
+            </div>
             <div class="kpi-grid" id="kpiGrid"></div>
             <div class="chart-grid">
               <div class="chart-card full">
@@ -1377,6 +1426,7 @@
     }
 
     const STORAGE_KEY = "erp_data_v1";
+    const CHART_3D_KEY = "erp_chart_3d_v1";
     const INVALID_ORDER_STATUSES = new Set(["취소", "반품"]);
     const STOCK_RISK_THRESHOLD = 50;
 
@@ -2128,10 +2178,12 @@
     const chart3dPlugin = {
       id: "chart3d",
       beforeDatasetsDraw(chart, args) {
+        if (!chart.options.plugins?.chart3d?.enabled) return;
         if (chart.config.type === "pie") drawPie3DDepth(chart, args.index);
         if (chart.config.type === "line") drawLine3DDepth(chart, args.index);
       },
       afterDatasetsDraw(chart, args) {
+        if (!chart.options.plugins?.chart3d?.enabled) return;
         if (chart.config.type === "bar") drawBar3DFaces(chart, args.index);
       }
     };
@@ -2177,13 +2229,40 @@
     Chart.register(chart3dPlugin);
     Chart.register(pieSliceLabelsPlugin);
 
+    function isChart3dEnabled() {
+      return localStorage.getItem(CHART_3D_KEY) === "1";
+    }
+
+    function setChart3dEnabled(enabled) {
+      localStorage.setItem(CHART_3D_KEY, enabled ? "1" : "0");
+    }
+
+    function chart3dPluginOpts() {
+      return { enabled: isChart3dEnabled() };
+    }
+
+    function chartLayoutPadding(overrides = {}) {
+      const on = isChart3dEnabled();
+      return {
+        top: on ? (overrides.top3d ?? 16) : (overrides.top2d ?? 8),
+        right: on ? (overrides.right3d ?? 24) : (overrides.right2d ?? 12),
+        bottom: on ? (overrides.bottom3d ?? 4) : (overrides.bottom2d ?? 4),
+        left: overrides.left ?? 4
+      };
+    }
+
+    function syncChart3dToggle() {
+      const toggle = document.getElementById("toggleChart3d");
+      if (toggle) toggle.checked = isChart3dEnabled();
+    }
+
     function pieChartOptions(isMoney = true) {
       return {
         responsive: true,
         maintainAspectRatio: false,
-        layout: { padding: { top: 8, right: 12, bottom: 20, left: 4 } },
+        layout: { padding: chartLayoutPadding({ bottom3d: 20, bottom2d: 4 }) },
         plugins: {
-          chart3d: true,
+          chart3d: chart3dPluginOpts(),
           pieSliceLabels: { isMoney },
           legend: {
             position: "right",
@@ -2226,6 +2305,7 @@
 
       placeholder.style.display = "none";
       content.style.display = "";
+      syncChart3dToggle();
 
       const m = computeDashboardMetrics();
 
@@ -2273,9 +2353,9 @@
       const lineChartOpts = {
         responsive: true,
         maintainAspectRatio: false,
-        layout: { padding: { top: 16, right: 12, bottom: 4, left: 4 } },
+        layout: { padding: chartLayoutPadding() },
         plugins: {
-          chart3d: true,
+          chart3d: chart3dPluginOpts(),
           legend: { display: false },
           tooltip: moneyTooltip
         },
@@ -2294,9 +2374,9 @@
       const verticalBarOpts = {
         responsive: true,
         maintainAspectRatio: false,
-        layout: { padding: { top: 16, right: 24, bottom: 4, left: 4 } },
+        layout: { padding: chartLayoutPadding() },
         plugins: {
-          chart3d: true,
+          chart3d: chart3dPluginOpts(),
           legend: { display: false },
           tooltip: moneyTooltip
         },
@@ -2331,9 +2411,9 @@
         responsive: true,
         maintainAspectRatio: false,
         indexAxis: "y",
-        layout: { padding: { top: 12, right: 24, bottom: 4, left: 4 } },
+        layout: { padding: chartLayoutPadding({ top3d: 12, top2d: 4 }) },
         plugins: {
-          chart3d: true,
+          chart3d: chart3dPluginOpts(),
           legend: { display: false },
           tooltip: moneyTooltip
         },
@@ -3426,11 +3506,16 @@
 
     document.getElementById("btnLoadSample").addEventListener("click", loadSampleData);
     document.getElementById("btnClearAll").addEventListener("click", clearAllData);
+    document.getElementById("toggleChart3d").addEventListener("change", (e) => {
+      setChart3dEnabled(e.target.checked);
+      refreshDashboardIfNeeded();
+    });
 
     initBulkUpload();
     renderUploadGrid();
     renderSummary();
     renderRawData();
+    syncChart3dToggle();
     updateStickyChromeTop();
     window.addEventListener("resize", updateStickyChromeTop);
     window.addEventListener("scroll", scheduleDashboardListStickyHeaders, { passive: true });
