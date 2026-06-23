@@ -918,8 +918,11 @@
     }
 
     .sticky-list-table-head {
-      overflow: hidden;
+      position: sticky;
+      top: var(--sticky-chrome-top, 128px);
+      z-index: 35;
       max-width: 100%;
+      background: var(--bg);
     }
 
     .sticky-list-table-xscroll {
@@ -934,27 +937,26 @@
       width: 100%;
     }
 
-    .sticky-list-table thead th {
-      position: sticky;
-      top: var(--sticky-chrome-top, 128px);
-      z-index: 35;
+    .sticky-list-table-head thead th {
+      position: static;
+      top: auto;
       background: var(--bg);
       box-shadow: inset 0 -1px 0 var(--border);
     }
 
-    .sticky-list-table:not(.thead-pinned) thead th:first-child {
+    .sticky-list-table:not(.thead-pinned) .sticky-list-table-head thead th:first-child {
       border-top-left-radius: calc(var(--radius) - 1px);
     }
 
-    .sticky-list-table:not(.thead-pinned) thead th:last-child {
+    .sticky-list-table:not(.thead-pinned) .sticky-list-table-head thead th:last-child {
       border-top-right-radius: calc(var(--radius) - 1px);
     }
 
-    .sticky-list-table.thead-pinned thead th {
+    .sticky-list-table.thead-pinned .sticky-list-table-head {
       box-shadow: inset 0 -1px 0 var(--border), 0 -16px 0 0 var(--bg);
     }
 
-    .sticky-list-table.thead-pinned thead th::before {
+    .sticky-list-table.thead-pinned .sticky-list-table-head::before {
       content: "";
       position: absolute;
       left: 0;
@@ -965,11 +967,11 @@
       pointer-events: none;
     }
 
-    .sticky-list-table.thead-follow thead th {
+    .sticky-list-table.thead-follow .sticky-list-table-head {
       box-shadow: inset 0 -1px 0 var(--border);
     }
 
-    .sticky-list-table.thead-follow thead th::before {
+    .sticky-list-table.thead-follow .sticky-list-table-head::before {
       display: none;
     }
 
@@ -3073,9 +3075,11 @@
       document.documentElement.style.setProperty("--sticky-chrome-top", `${stickyTop}px`);
 
       document.querySelectorAll(".sticky-list-table").forEach((wrap) => {
+        const headBlock = wrap.querySelector(".sticky-list-table-head");
         const thead = wrap.querySelector("thead");
         const rows = [...wrap.querySelectorAll("tbody tr")];
         const ths = thead ? [...thead.querySelectorAll("th")] : [];
+        const stickyTarget = headBlock || ths[0];
         const cramped = isTableCramped(wrap);
         const allowFollow = wrap.classList.contains("follow-last-row") && !cramped;
 
@@ -3083,23 +3087,27 @@
 
         const clearFollow = () => {
           wrap.classList.remove("thead-follow");
-          ths.forEach((th) => th.style.removeProperty("top"));
+          if (headBlock) {
+            headBlock.style.removeProperty("top");
+          } else {
+            ths.forEach((th) => th.style.removeProperty("top"));
+          }
         };
 
-        if (!thead || !rows.length) {
+        if (!thead || !rows.length || !stickyTarget) {
           clearFollow();
           wrap.classList.remove("thead-pinned");
           return;
         }
 
-        const headerHeight = thead.offsetHeight;
+        const headerHeight = (headBlock || thead).offsetHeight;
         const headerBottom = stickyTop + headerHeight;
-        const firstTh = ths[0];
         const wrapRect = wrap.getBoundingClientRect();
 
         const applyPinned = () => {
+          const headTop = stickyTarget.getBoundingClientRect().top;
           const isPinned = wrapRect.top < stickyTop - 0.5
-            && firstTh && firstTh.getBoundingClientRect().top <= stickyTop + 0.5;
+            && headTop <= stickyTop + 0.5;
           wrap.classList.toggle("thead-pinned", isPinned);
         };
 
@@ -3108,9 +3116,13 @@
           wrap.classList.add("thead-follow");
           const exiting = anchorBottom <= stickyTop;
           const top = exiting ? followTop : Math.max(followTop, stickyTop);
-          ths.forEach((th) => {
-            th.style.top = `${top}px`;
-          });
+          if (headBlock) {
+            headBlock.style.top = `${top}px`;
+          } else {
+            ths.forEach((th) => {
+              th.style.top = `${top}px`;
+            });
+          }
         };
 
         if (!allowFollow || rows.length === 1) {
