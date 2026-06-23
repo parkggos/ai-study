@@ -975,6 +975,12 @@
       display: none;
     }
 
+    .sticky-list-table.thead-release .sticky-list-table-head {
+      position: relative;
+      top: auto;
+      z-index: 35;
+    }
+
     .sticky-list-table tbody tr:last-child td:first-child {
       border-bottom-left-radius: calc(var(--radius) - 1px);
     }
@@ -3086,9 +3092,11 @@
         wrap.classList.toggle("has-x-scroll", cramped);
 
         const clearFollow = () => {
-          wrap.classList.remove("thead-follow");
+          wrap.classList.remove("thead-follow", "thead-release");
           if (headBlock) {
             headBlock.style.removeProperty("top");
+            headBlock.style.removeProperty("position");
+            headBlock.style.removeProperty("transform");
           } else {
             ths.forEach((th) => th.style.removeProperty("top"));
           }
@@ -3111,11 +3119,32 @@
           wrap.classList.toggle("thead-pinned", isPinned);
         };
 
-        const applyFollowTop = (followTop, anchorBottom) => {
+        const applyFollowTop = (followTop, anchorBottom, tailMode = false) => {
           wrap.classList.remove("thead-pinned");
           wrap.classList.add("thead-follow");
           const exiting = anchorBottom <= stickyTop;
-          const top = exiting ? followTop : Math.max(followTop, stickyTop);
+          const top = (tailMode || exiting) ? followTop : Math.max(followTop, stickyTop);
+
+          if (headBlock && tailMode) {
+            const naturalTop = wrapRect.top;
+            if (top < stickyTop - 0.5) {
+              wrap.classList.add("thead-release");
+              headBlock.style.position = "relative";
+              headBlock.style.top = "auto";
+              headBlock.style.transform = `translateY(${top - naturalTop}px)`;
+              return;
+            }
+            wrap.classList.remove("thead-release");
+            headBlock.style.position = "";
+            headBlock.style.transform = "";
+          } else {
+            wrap.classList.remove("thead-release");
+            if (headBlock) {
+              headBlock.style.position = "";
+              headBlock.style.transform = "";
+            }
+          }
+
           if (headBlock) {
             headBlock.style.top = `${top}px`;
           } else {
@@ -3130,17 +3159,21 @@
           const lastRect = lastRow.getBoundingClientRect();
 
           if (lastRect.bottom > stickyTop) {
-            applyFollowTop(lastRect.top - headerHeight, lastRect.bottom);
+            applyFollowTop(lastRect.top - headerHeight, lastRect.bottom, true);
             return;
           }
 
           if (wrapRect.bottom > stickyTop) {
-            applyFollowTop(wrapRect.bottom - headerHeight, wrapRect.bottom);
+            applyFollowTop(wrapRect.bottom - headerHeight, wrapRect.bottom, true);
             return;
           }
 
           clearFollow();
-          wrap.classList.remove("thead-pinned");
+          wrap.classList.remove("thead-pinned", "thead-release");
+          if (headBlock) {
+            headBlock.style.position = "";
+            headBlock.style.transform = "";
+          }
         };
 
         if (!allowFollow || rows.length === 1) {
@@ -3150,9 +3183,14 @@
         }
 
         const secondLastRow = rows[rows.length - 2];
+        const lastRow = rows[rows.length - 1];
         const secondLastPast = secondLastRow.getBoundingClientRect().bottom <= headerBottom;
+        const lastRect = lastRow.getBoundingClientRect();
+        const lastRowVisible = lastRect.bottom > stickyTop;
+        const nearTableEnd = wrapRect.bottom <= window.innerHeight + 40;
+        const inTailScroll = secondLastPast || (lastRowVisible && nearTableEnd);
 
-        if (!secondLastPast) {
+        if (!inTailScroll) {
           clearFollow();
           applyPinned();
           return;
