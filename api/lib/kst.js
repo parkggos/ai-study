@@ -35,4 +35,12 @@ function formatKstIso(dateInput = new Date()) {
   return `${year}-${month}-${day}T${hour}:${minute}:${second}+09:00`;
 }
 
-module.exports = { formatKstDateTime, formatKstIso };
+function normalizeKstDbValue(value) {
+  if (!value) return null;
+  if (typeof value === "string") {
+    return value.replace("T", " ").replace(/\+.*$/, "").replace(/\.\d+$/, "").slice(0, 19);
+  }
+  return formatKstDateTime(value);
+}
+
+module.exports = { formatKstDateTime, formatKstIso, normalizeKstDbValue };

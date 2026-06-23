@@ -1,7 +1,7 @@
 -- Supabase SQL Editor에서 실행하세요.
 create table if not exists public.lotto_draws (
   id uuid primary key default gen_random_uuid(),
-  created_at timestamptz not null default now(),
+  created_at timestamp without time zone not null default (timezone('Asia/Seoul', now())), -- KST 벽시계
   numbers integer[] not null,
   bonus integer not null check (bonus between 1 and 45),
   draw_type text not null default 'random' check (draw_type in ('random', 'analysis', 'saju', 'auto')),
