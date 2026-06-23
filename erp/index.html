@@ -1962,7 +1962,10 @@
 
       destroyDashboardCharts();
 
-      const chartColors = ["#2563eb", "#7c3aed", "#16a34a", "#d97706", "#dc2626", "#0891b2", "#db2777", "#4f46e5"];
+      const chartColors = [
+        "#A8D8EA", "#C9B8E8", "#B5EAD7", "#FFE5B4",
+        "#FFB7C5", "#B8E0D2", "#FFD6A5", "#D4E4FF"
+      ];
 
       const valueAxisTicks = {
         callback(v) {
@@ -2068,8 +2071,8 @@
           datasets: [{
             label: "매출",
             data: m.monthlyValues,
-            borderColor: "#2563eb",
-            backgroundColor: "rgba(37, 99, 235, 0.08)",
+            borderColor: "#7EB8DA",
+            backgroundColor: "rgba(168, 216, 234, 0.35)",
             fill: true,
             tension: 0.3,
             pointRadius: 4,
