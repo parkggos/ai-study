@@ -74,13 +74,19 @@ module.exports = async function handler(req, res) {
         return res.status(400).json({ error });
       }
 
-      const sortedNumbers = [...body.numbers].sort((a, b) => a - b);
+      const sortedNumbers = [...body.numbers].map((n) => Number.parseInt(n, 10)).sort((a, b) => a - b);
+      const bonus = Number.parseInt(body.bonus, 10);
+      const errorAfterParse = validateDrawPayload({ numbers: sortedNumbers, bonus, drawType: body.drawType });
+      if (errorAfterParse) {
+        return res.status(400).json({ error: errorAfterParse });
+      }
+
       const rows = await supabaseRequest("lotto_draws", {
         method: "POST",
         prefer: "return=representation",
         body: {
           numbers: sortedNumbers,
-          bonus: body.bonus,
+          bonus,
           draw_type: body.drawType || "random",
         },
       });

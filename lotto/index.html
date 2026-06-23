@@ -2609,8 +2609,8 @@
       let sorted;
 
       if (preset) {
-        main = [...preset.numbers];
-        bonus = preset.bonus;
+        main = preset.numbers.map((n) => Number(n));
+        bonus = Number(preset.bonus);
         sorted = [...main].sort((a, b) => a - b);
       } else {
         ({ main, bonus, sorted } = drawFullSet());
@@ -2621,6 +2621,7 @@
       const slots = resultRack.querySelectorAll(".rack-slot:not(.bonus)");
       const bonusSlot = document.getElementById("bonusSlot");
       const drawOrder = shuffleArray(main);
+      const drawnMain = [];
       const spinTime = fast ? 500 : 1200;
       const mixPower = fast ? 2.1 : 2.8;
 
@@ -2649,6 +2650,7 @@
 
       for (let i = 0; i < COUNT; i++) {
         const num = drawOrder[i];
+        drawnMain.push(num);
         const inDrum = drumPhysics.balls.filter((b) => b.inDrum).length;
         drawStatus.textContent = `${prefix}${i + 1}번째 번호 추첨 · 구체에 ${inDrum}개`;
         await pickNumberFromDrum(num, spinTime, fast);
@@ -2709,7 +2711,28 @@
       drawStatus.classList.remove("drawing");
       if (!fast) playComplete();
 
-      return { numbers: sorted, bonus };
+      return readDrawResultFromRack() || normalizeDrawResult(drawnMain, bonus);
+    }
+
+    function normalizeDrawResult(numbers, bonus) {
+      if (!Array.isArray(numbers) || numbers.length !== COUNT) return null;
+      const parsed = numbers.map((n) => Number.parseInt(n, 10));
+      const parsedBonus = Number.parseInt(bonus, 10);
+      if (parsed.some((n) => !Number.isInteger(n) || n < MIN || n > MAX)) return null;
+      if (!Number.isInteger(parsedBonus) || parsedBonus < MIN || parsedBonus > MAX) return null;
+      if (new Set(parsed).size !== COUNT || parsed.includes(parsedBonus)) return null;
+      return { numbers: [...parsed].sort((a, b) => a - b), bonus: parsedBonus };
+    }
+
+    function readDrawResultFromRack() {
+      const mainSlots = resultRack.querySelectorAll(".rack-slot:not(.bonus).filled");
+      const bonusSlot = document.getElementById("bonusSlot");
+      if (mainSlots.length !== COUNT || !bonusSlot?.classList.contains("filled")) {
+        return null;
+      }
+      const numbers = Array.from(mainSlots, (slot) => Number.parseInt(slot.textContent, 10));
+      const bonus = Number.parseInt(bonusSlot.textContent, 10);
+      return normalizeDrawResult(numbers, bonus);
     }
 
     function createHistoryEntry(numbers, bonus, drawType = "random") {
@@ -2756,10 +2779,15 @@
       }
     }
 
-    async function persistDrawHistory(numbers, bonus, drawType = "random") {
-      const entry = createHistoryEntry(numbers, bonus, drawType);
+    async function persistDrawHistory(drawResult, drawType = "random") {
+      const result =
+        readDrawResultFromRack() ||
+        normalizeDrawResult(drawResult?.numbers, drawResult?.bonus);
+      if (!result) return;
+
+      const entry = createHistoryEntry(result.numbers, result.bonus, drawType);
       addToHistory(entry);
-      const saved = await saveDrawToSupabase(entry.numbers, entry.bonus, drawType);
+      const saved = await saveDrawToSupabase(result.numbers, result.bonus, drawType);
       if (saved?.id) {
         entry.id = saved.id;
         entry.createdAt = saved.createdAt || entry.createdAt;
@@ -2841,8 +2869,8 @@
 
       const result = await runLiveDraw({ fast, preset, statusPrefix, analysisNote, analysisContext });
 
-      if (addHistory) {
-        await persistDrawHistory(result.numbers, result.bonus, drawType);
+      if (addHistory && result) {
+        await persistDrawHistory(result, drawType);
       }
 
       isDrawing = false;
@@ -3359,7 +3387,10 @@
 
         const result = await runLiveDraw({
           fast: false,
-          preset: data.recommendation,
+          preset: {
+            numbers: data.recommendation.numbers.map((n) => Number(n)),
+            bonus: Number(data.recommendation.bonus),
+          },
           statusPrefix: "사주 추천",
           continueMixing: true,
           sajuContext: {
@@ -3367,7 +3398,9 @@
             recommendation: data.recommendation,
           },
         });
-        await persistDrawHistory(result.numbers, result.bonus, "saju");
+        if (result) {
+          await persistDrawHistory(result, "saju");
+        }
       } catch (err) {
         loadingMsg.remove();
         stopChuteSpin();
