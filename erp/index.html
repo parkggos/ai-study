@@ -1896,11 +1896,52 @@
       `;
     }
 
+    const pieSliceLabelsPlugin = {
+      id: "pieSliceLabels",
+      afterDatasetDraw(chart, args, options) {
+        if (chart.config.type !== "pie") return;
+
+        const { ctx } = chart;
+        const isMoney = options?.isMoney ?? true;
+        const dataset = chart.data.datasets[args.index];
+        if (!dataset?.data?.length) return;
+
+        const meta = chart.getDatasetMeta(args.index);
+        const total = dataset.data.reduce((sum, val) => sum + (Number(val) || 0), 0);
+        if (total <= 0) return;
+
+        meta.data.forEach((arc, i) => {
+          const value = Number(dataset.data[i]) || 0;
+          if (value <= 0) return;
+
+          const pct = (value / total) * 100;
+          if (pct < 3) return;
+
+          const formatted = isMoney ? formatMoney(value) : `${formatCount(value)}건`;
+          const pos = arc.tooltipPosition();
+
+          ctx.save();
+          ctx.fillStyle = "#334155";
+          ctx.font = "600 11px Inter, sans-serif";
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+          ctx.fillText(formatted, pos.x, pos.y - 7);
+          ctx.font = "500 10px Inter, sans-serif";
+          ctx.fillStyle = "#64748b";
+          ctx.fillText(`(${pct.toFixed(1)}%)`, pos.x, pos.y + 8);
+          ctx.restore();
+        });
+      }
+    };
+
+    Chart.register(pieSliceLabelsPlugin);
+
     function pieChartOptions(isMoney = true) {
       return {
         responsive: true,
         maintainAspectRatio: false,
         plugins: {
+          pieSliceLabels: { isMoney },
           legend: {
             position: "right",
             labels: { boxWidth: 12, padding: 14, font: { size: 12 } }
