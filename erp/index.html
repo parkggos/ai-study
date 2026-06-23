@@ -919,12 +919,27 @@
       box-shadow: inset 0 -1px 0 var(--border);
     }
 
-    .sticky-list-table thead th:first-child {
+    .sticky-list-table:not(.thead-pinned) thead th:first-child {
       border-top-left-radius: calc(var(--radius) - 1px);
     }
 
-    .sticky-list-table thead th:last-child {
+    .sticky-list-table:not(.thead-pinned) thead th:last-child {
       border-top-right-radius: calc(var(--radius) - 1px);
+    }
+
+    .sticky-list-table.thead-pinned thead th {
+      box-shadow: inset 0 -1px 0 var(--border), 0 -16px 0 0 var(--bg);
+    }
+
+    .sticky-list-table.thead-pinned thead th::before {
+      content: "";
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 100%;
+      height: 20px;
+      background: var(--bg);
+      pointer-events: none;
     }
 
     .sticky-list-table tbody tr:last-child td:first-child {
@@ -2916,7 +2931,7 @@
 
     function getStickyChromeTop() {
       const topbar = document.querySelector(".topbar");
-      return Math.ceil(topbar?.getBoundingClientRect().bottom ?? 128);
+      return topbar?.getBoundingClientRect().bottom ?? 128;
     }
 
     function updateStickyChromeTop() {
@@ -2925,6 +2940,28 @@
       const chromeTop = getStickyChromeTop();
       document.documentElement.style.setProperty("--nav-height", `${navH}px`);
       document.documentElement.style.setProperty("--sticky-chrome-top", `${chromeTop}px`);
+      scheduleStickyListHeaders();
+    }
+
+    let stickyHeaderTicking = false;
+
+    function updateStickyListHeaders() {
+      const stickyTop = getStickyChromeTop();
+      document.documentElement.style.setProperty("--sticky-chrome-top", `${stickyTop}px`);
+
+      document.querySelectorAll(".sticky-list-table").forEach((wrap) => {
+        const isPinned = wrap.getBoundingClientRect().top < stickyTop - 0.5;
+        wrap.classList.toggle("thead-pinned", isPinned);
+      });
+    }
+
+    function scheduleStickyListHeaders() {
+      if (stickyHeaderTicking) return;
+      stickyHeaderTicking = true;
+      requestAnimationFrame(() => {
+        updateStickyListHeaders();
+        stickyHeaderTicking = false;
+      });
     }
 
     function switchPanel(panelId) {
@@ -3664,6 +3701,7 @@
         : `<tr><td colspan="${current.headers.length}" style="text-align:center;color:var(--text-muted);">데이터 없음</td></tr>`;
 
       renderRawdataPagination(totalPages, totalRows, start, pageData.length);
+      scheduleStickyListHeaders();
     }
 
     function renderRawdataPagination(totalPages, totalRows, start, shown) {
@@ -3794,7 +3832,7 @@
     updateTopbarDashboardActions();
     updateStickyChromeTop();
     window.addEventListener("resize", updateStickyChromeTop);
-    window.addEventListener("scroll", updateStickyChromeTop, { passive: true });
+    window.addEventListener("scroll", scheduleStickyListHeaders, { passive: true });
   </script>
 </body>
 </html>
