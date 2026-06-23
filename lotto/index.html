@@ -804,8 +804,83 @@
 
     .history-item {
       display: flex;
+      flex-direction: column;
+      align-items: stretch;
+      gap: 4px;
+    }
+
+    .history-item-main {
+      display: flex;
       align-items: center;
-      gap: 12px;
+      gap: 10px;
+      width: 100%;
+      padding: 4px 6px;
+      margin: -4px -6px;
+      border-radius: var(--radius-sm);
+      border: 1px solid transparent;
+      background: transparent;
+      text-align: left;
+    }
+
+    .history-item-clickable .history-item-main {
+      cursor: pointer;
+    }
+
+    .history-item-clickable .history-item-main:hover {
+      background: var(--surface-soft);
+    }
+
+    .history-item-active .history-item-main {
+      border-color: var(--primary);
+      background: var(--surface-soft);
+    }
+
+    .history-type {
+      flex-shrink: 0;
+      font-size: 11px;
+      font-weight: 700;
+      line-height: 1.2;
+      padding: 3px 8px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--hairline);
+      color: var(--body);
+      background: var(--canvas);
+    }
+
+    .history-type-analysis {
+      color: var(--primary-dark);
+      border-color: var(--primary);
+      background: rgba(118, 185, 0, 0.08);
+    }
+
+    .history-type-saju {
+      color: #5a3d8c;
+      border-color: #9c7bd8;
+      background: rgba(156, 123, 216, 0.1);
+    }
+
+    .history-type-auto {
+      color: var(--mute);
+    }
+
+    .history-type-random {
+      color: var(--mute);
+    }
+
+    .history-time {
+      margin-left: auto;
+      flex-shrink: 0;
+      font-size: 11px;
+      line-height: 1.25;
+      color: var(--mute);
+      white-space: nowrap;
+    }
+
+    .history-reason-hint {
+      padding-left: calc(1.5rem + 10px);
+      font-size: 12px;
+      line-height: 1.4;
+      color: var(--mute);
     }
 
     .history-balls,
@@ -852,6 +927,13 @@
       line-height: 1.67;
       text-align: center;
       padding: 16px 0;
+    }
+
+    .history-help {
+      color: var(--mute);
+      font-size: 12px;
+      line-height: 1.5;
+      margin: -8px 0 12px;
     }
 
     .winners-toolbar {
@@ -1329,6 +1411,7 @@
       <section class="card">
         <span class="corner-square" aria-hidden="true"></span>
         <h2 class="card-title">추첨 기록</h2>
+        <p class="history-help">분석·사주 추첨 기록을 클릭하면 오른쪽 채팅창에 번호 선정 이유가 표시됩니다.</p>
         <ul class="history-list" id="historyList">
           <li class="empty-history" id="emptyHistory">아직 추첨 기록이 없습니다</li>
         </ul>
@@ -1422,6 +1505,14 @@
     let history = [];
     let audioCtx = null;
     let drawChatCapture = null;
+    let selectedHistoryKey = null;
+
+    const DRAW_TYPE_LABELS = {
+      random: "일반",
+      analysis: "분석",
+      saju: "사주",
+      auto: "자동",
+    };
 
     const LOTTO_DRAWS_API_URL = `${window.location.origin}/api/lotto-draws`;
 
@@ -2833,9 +2924,44 @@
       renderHistory();
     }
 
+    function getDrawTypeLabel(drawType) {
+      return DRAW_TYPE_LABELS[drawType] || DRAW_TYPE_LABELS.random;
+    }
+
+    function getHistoryEntryKey(entry, index) {
+      return entry.id || `local-${history.length - index}-${entry.createdAt || index}`;
+    }
+
+    function showHistoryEntryReason(entry, index) {
+      switchTab("draw");
+      selectedHistoryKey = getHistoryEntryKey(entry, index);
+      renderHistory();
+
+      if (!chatMessages) return;
+
+      chatMessages.innerHTML = "";
+      const title = `${getDrawTypeLabel(entry.drawType)} 추첨 · ${entry.createdAt || "기록"}`;
+      appendChatMessage("bot", title);
+
+      if (Array.isArray(entry.chatLog) && entry.chatLog.length) {
+        entry.chatLog.forEach((msg) => {
+          appendChatMessage(msg.type || "bot", msg.text);
+        });
+        return;
+      }
+
+      if (entry.drawType === "analysis" || entry.drawType === "saju") {
+        appendChatMessage("bot", "저장된 선정 이유가 없습니다. (이전 기록이거나 저장에 실패했을 수 있습니다.)");
+        return;
+      }
+
+      appendChatMessage("bot", "무작위 추첨으로 생성된 번호라 별도의 선정 이유가 없습니다.");
+    }
+
     function renderHistory() {
       if (history.length === 0) {
         historyList.innerHTML = "";
+        selectedHistoryKey = null;
         const li = document.createElement("li");
         li.className = "empty-history";
         li.id = "emptyHistory";
@@ -2846,12 +2972,28 @@
 
       historyList.innerHTML = "";
       history.forEach((entry, index) => {
+        const entryKey = getHistoryEntryKey(entry, index);
         const li = document.createElement("li");
-        li.className = "history-item";
+        li.className = "history-item history-item-clickable";
+        if (selectedHistoryKey === entryKey) {
+          li.classList.add("history-item-active");
+        }
+
+        const main = document.createElement("button");
+        main.type = "button";
+        main.className = "history-item-main";
+        main.setAttribute(
+          "aria-label",
+          `${getDrawTypeLabel(entry.drawType)} 추첨 기록 ${history.length - index}번, 선정 이유 보기`
+        );
 
         const idx = document.createElement("span");
         idx.className = "history-index";
         idx.textContent = `${history.length - index}.`;
+
+        const typeBadge = document.createElement("span");
+        typeBadge.className = `history-type history-type-${entry.drawType || "random"}`;
+        typeBadge.textContent = getDrawTypeLabel(entry.drawType);
 
         const ballsWrap = document.createElement("div");
         ballsWrap.className = "history-balls";
@@ -2871,8 +3013,32 @@
           ballsWrap.appendChild(createHistoryBall(entry.bonus, true));
         }
 
-        li.appendChild(idx);
-        li.appendChild(ballsWrap);
+        main.appendChild(idx);
+        main.appendChild(typeBadge);
+        main.appendChild(ballsWrap);
+
+        if (entry.createdAt) {
+          const timeEl = document.createElement("span");
+          timeEl.className = "history-time";
+          timeEl.textContent = entry.createdAt;
+          main.appendChild(timeEl);
+        }
+
+        main.addEventListener("click", () => {
+          showHistoryEntryReason(entry, index);
+        });
+
+        li.appendChild(main);
+
+        if (entry.drawType === "analysis" || entry.drawType === "saju") {
+          const hint = document.createElement("p");
+          hint.className = "history-reason-hint";
+          hint.textContent = entry.chatLog?.length
+            ? "클릭하면 번호 선정 이유 보기"
+            : "선정 이유 없음";
+          li.appendChild(hint);
+        }
+
         historyList.appendChild(li);
       });
     }
@@ -2965,6 +3131,7 @@
 
     clearBtn.addEventListener("click", () => {
       history = [];
+      selectedHistoryKey = null;
       renderHistory();
       resetDrawStage();
     });
