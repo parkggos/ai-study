@@ -1265,6 +1265,23 @@
       }
     };
 
+    function getAppBasePath() {
+      const path = window.location.pathname;
+      const erpIdx = path.indexOf("/erp");
+      if (erpIdx !== -1) {
+        return path.slice(0, erpIdx + 4) + "/";
+      }
+      if (path.endsWith("/")) return path;
+      if (path.endsWith(".html")) {
+        return path.slice(0, path.lastIndexOf("/") + 1);
+      }
+      return path + "/";
+    }
+
+    function getAssetUrl(filename) {
+      return getAppBasePath() + filename.replace(/^\//, "");
+    }
+
     const STORAGE_KEY = "erp_data_v1";
     const INVALID_ORDER_STATUSES = new Set(["취소", "반품"]);
     const STOCK_RISK_THRESHOLD = 50;
@@ -2792,12 +2809,14 @@
     async function loadSampleData() {
       const types = Object.keys(DATA_TYPES);
       let loaded = 0;
+      let failed = 0;
 
       for (const type of types) {
         if (store[type]) continue;
         try {
-          const res = await fetch(DATA_TYPES[type].sampleFile);
-          if (!res.ok) throw new Error("샘플 파일을 찾을 수 없습니다.");
+          const url = getAssetUrl(DATA_TYPES[type].sampleFile);
+          const res = await fetch(url);
+          if (!res.ok) throw new Error(`샘플 파일을 찾을 수 없습니다. (${url})`);
           const text = await res.text();
           const { headers, data } = parseCSV(text);
           validateData(type, headers);
@@ -2810,6 +2829,7 @@
           };
           loaded++;
         } catch (err) {
+          failed++;
           showToast(`${DATA_TYPES[type].label} 샘플 로드 실패: ${err.message}`, true);
         }
       }
@@ -2817,10 +2837,9 @@
       if (loaded > 0) {
         saveStore();
         showToast(`샘플 데이터 ${loaded}개 파일 불러오기 완료`);
-        renderUploadGrid();
-        renderSummary();
-        refreshDashboardIfNeeded();
-        clearCachedReport();
+        afterDataUpload();
+      } else if (failed > 0) {
+        showToast("샘플 데이터를 불러오지 못했습니다. 파일 경로를 확인해 주세요.", true);
       } else {
         showToast("이미 모든 샘플 데이터가 로드되어 있습니다.");
       }
