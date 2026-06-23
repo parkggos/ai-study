@@ -1,7 +1,10 @@
 const { supabaseRequest } = require("./lib/supabase");
 
 const DRAW_TYPES = new Set(["random", "analysis", "saju", "auto"]);
+const CHAT_TYPES = new Set(["user", "bot", "error"]);
 const MAX_LIMIT = 50;
+const MAX_CHAT_LOG = 40;
+const MAX_CHAT_TEXT = 4000;
 
 function validateDrawPayload(body) {
   const numbers = body?.numbers;
@@ -30,6 +33,29 @@ function validateDrawPayload(body) {
   return null;
 }
 
+function validateChatLog(chatLog) {
+  if (chatLog == null) return null;
+  if (!Array.isArray(chatLog)) return "chatLog는 배열이어야 합니다.";
+  if (chatLog.length > MAX_CHAT_LOG) return "chatLog가 너무 깁니다.";
+
+  for (const item of chatLog) {
+    if (!item || typeof item !== "object") return "chatLog 형식이 올바르지 않습니다.";
+    if (!CHAT_TYPES.has(item.type)) return "chatLog type 값이 올바르지 않습니다.";
+    if (typeof item.text !== "string" || !item.text.trim()) return "chatLog text가 비어 있습니다.";
+    if (item.text.length > MAX_CHAT_TEXT) return "chatLog text가 너무 깁니다.";
+  }
+
+  return null;
+}
+
+function sanitizeChatLog(chatLog) {
+  if (!Array.isArray(chatLog) || chatLog.length === 0) return null;
+  return chatLog.map((item) => ({
+    type: item.type,
+    text: item.text.trim(),
+  }));
+}
+
 function mapRow(row) {
   return {
     id: row.id,
@@ -37,6 +63,7 @@ function mapRow(row) {
     bonus: row.bonus,
     drawType: row.draw_type,
     createdAt: row.created_at,
+    chatLog: row.chat_log || null,
   };
 }
 
@@ -55,12 +82,9 @@ module.exports = async function handler(req, res) {
         MAX_LIMIT,
         Math.max(1, parseInt(req.query?.limit, 10) || MAX_LIMIT)
       );
-      const rows = await supabaseRequest(
-        "lotto_draws",
-        {
-          query: `?select=id,numbers,bonus,draw_type,created_at&order=created_at.desc&limit=${limit}`,
-        }
-      );
+      const rows = await supabaseRequest("lotto_draws", {
+        query: `?select=id,numbers,bonus,draw_type,created_at,chat_log&order=created_at.desc&limit=${limit}`,
+      });
 
       return res.status(200).json({
         draws: Array.isArray(rows) ? rows.map(mapRow) : [],
@@ -74,6 +98,11 @@ module.exports = async function handler(req, res) {
         return res.status(400).json({ error });
       }
 
+      const chatLogError = validateChatLog(body.chatLog);
+      if (chatLogError) {
+        return res.status(400).json({ error: chatLogError });
+      }
+
       const sortedNumbers = [...body.numbers].map((n) => Number.parseInt(n, 10)).sort((a, b) => a - b);
       const bonus = Number.parseInt(body.bonus, 10);
       const errorAfterParse = validateDrawPayload({ numbers: sortedNumbers, bonus, drawType: body.drawType });
@@ -81,14 +110,18 @@ module.exports = async function handler(req, res) {
         return res.status(400).json({ error: errorAfterParse });
       }
 
+      const chatLog = sanitizeChatLog(body.chatLog);
+      const insertBody = {
+        numbers: sortedNumbers,
+        bonus,
+        draw_type: body.drawType || "random",
+      };
+      if (chatLog) insertBody.chat_log = chatLog;
+
       const rows = await supabaseRequest("lotto_draws", {
         method: "POST",
         prefer: "return=representation",
-        body: {
-          numbers: sortedNumbers,
-          bonus,
-          draw_type: body.drawType || "random",
-        },
+        body: insertBody,
       });
 
       const row = Array.isArray(rows) ? rows[0] : rows;

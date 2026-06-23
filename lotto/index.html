@@ -1385,6 +1385,23 @@
       });
     }
 
+    function beginDrawChatCapture() {
+      drawChatCapture = [];
+    }
+
+    function finishDrawChatCapture() {
+      const log = drawChatCapture;
+      drawChatCapture = null;
+      return log && log.length ? log : null;
+    }
+
+    function recordDrawChatMessage(type, msgEl) {
+      if (!drawChatCapture || !msgEl || type === "loading") return;
+      const text = msgEl.textContent.trim();
+      if (!text) return;
+      drawChatCapture.push({ type, text });
+    }
+
     function appendChatMessage(type, content, extraNode = null) {
       if (!chatMessages) return null;
       const msg = document.createElement("div");
@@ -1396,6 +1413,7 @@
       }
       if (extraNode) msg.appendChild(extraNode);
       chatMessages.appendChild(msg);
+      recordDrawChatMessage(type, msg);
       scrollChatToBottom();
       return msg;
     }
@@ -1403,6 +1421,7 @@
     let isDrawing = false;
     let history = [];
     let audioCtx = null;
+    let drawChatCapture = null;
 
     const LOTTO_DRAWS_API_URL = `${window.location.origin}/api/lotto-draws`;
 
@@ -2735,11 +2754,12 @@
       return normalizeDrawResult(numbers, bonus);
     }
 
-    function createHistoryEntry(numbers, bonus, drawType = "random") {
+    function createHistoryEntry(numbers, bonus, drawType = "random", chatLog = null) {
       return {
         numbers: [...numbers].sort((a, b) => a - b),
         bonus,
         drawType,
+        chatLog,
         createdAt: new Date().toISOString(),
       };
     }
@@ -2761,14 +2781,17 @@
       }
     }
 
-    async function saveDrawToSupabase(numbers, bonus, drawType = "random") {
+    async function saveDrawToSupabase(numbers, bonus, drawType = "random", chatLog = null) {
       if (window.location.protocol === "file:") return null;
 
       try {
+        const payload = { numbers, bonus, drawType };
+        if (chatLog) payload.chatLog = chatLog;
+
         const response = await fetch(LOTTO_DRAWS_API_URL, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ numbers, bonus, drawType }),
+          body: JSON.stringify(payload),
         });
 
         if (!response.ok) return null;
@@ -2785,12 +2808,15 @@
         normalizeDrawResult(drawResult?.numbers, drawResult?.bonus);
       if (!result) return;
 
-      const entry = createHistoryEntry(result.numbers, result.bonus, drawType);
+      const chatLog =
+        drawType === "analysis" || drawType === "saju" ? finishDrawChatCapture() : null;
+      const entry = createHistoryEntry(result.numbers, result.bonus, drawType, chatLog);
       addToHistory(entry);
-      const saved = await saveDrawToSupabase(result.numbers, result.bonus, drawType);
+      const saved = await saveDrawToSupabase(result.numbers, result.bonus, drawType, chatLog);
       if (saved?.id) {
         entry.id = saved.id;
         entry.createdAt = saved.createdAt || entry.createdAt;
+        entry.chatLog = saved.chatLog || chatLog;
       }
     }
 
@@ -2894,6 +2920,7 @@
         );
         return;
       }
+      beginDrawChatCapture();
       appendChatMessage("user", "역대 당첨 데이터로 분석 추첨해 주세요.");
       const analysisNote = `역대 ${analyzed.analysis.totalDraws}회 분석 · `;
       performDraw({
@@ -3350,6 +3377,7 @@
       setControlsDisabled(true);
 
       const userText = message || "내 사주에서 좋고 강한 기운을 살려 로또 번호를 추천해 주세요.";
+      beginDrawChatCapture();
       appendChatMessage("user", userText);
       chatInput.value = "";
 

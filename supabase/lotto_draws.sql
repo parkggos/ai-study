@@ -4,7 +4,8 @@ create table if not exists public.lotto_draws (
   created_at timestamptz not null default now(),
   numbers integer[] not null,
   bonus integer not null check (bonus between 1 and 45),
-  draw_type text not null default 'random' check (draw_type in ('random', 'analysis', 'saju', 'auto'))
+  draw_type text not null default 'random' check (draw_type in ('random', 'analysis', 'saju', 'auto')),
+  chat_log jsonb
 );
 
 create index if not exists lotto_draws_created_at_idx on public.lotto_draws (created_at desc);
