@@ -1942,6 +1942,185 @@
       `;
     }
 
+    const CHART_3D_DEPTH = 12;
+    const CHART_3D_DX = 9;
+    const CHART_3D_DY = -7;
+
+    function hexToRgb(hex) {
+      const normalized = String(hex).replace("#", "");
+      const full = normalized.length === 3
+        ? normalized.split("").map((c) => c + c).join("")
+        : normalized;
+      const num = parseInt(full, 16);
+      if (!Number.isFinite(num)) return { r: 168, g: 216, b: 234 };
+      return { r: (num >> 16) & 255, g: (num >> 8) & 255, b: num & 255 };
+    }
+
+    function parseChartColor(color) {
+      if (!color) return { r: 168, g: 216, b: 234 };
+      if (typeof color === "string" && color.startsWith("#")) return hexToRgb(color);
+      const match = String(color).match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
+      if (match) return { r: +match[1], g: +match[2], b: +match[3] };
+      return { r: 168, g: 216, b: 234 };
+    }
+
+    function shadeChartColor(color, amount) {
+      const { r, g, b } = parseChartColor(color);
+      const t = amount < 0 ? 0 : 255;
+      const p = Math.abs(amount);
+      const mix = (c) => Math.round(c + (t - c) * p);
+      return `rgb(${mix(r)}, ${mix(g)}, ${mix(b)})`;
+    }
+
+    function datasetColor(dataset, index) {
+      const bg = dataset.backgroundColor ?? dataset.borderColor;
+      if (Array.isArray(bg)) return bg[index % bg.length];
+      return bg || "#A8D8EA";
+    }
+
+    function drawBar3DFaces(chart, datasetIndex) {
+      const meta = chart.getDatasetMeta(datasetIndex);
+      const dataset = chart.data.datasets[datasetIndex];
+      const horizontal = chart.options.indexAxis === "y";
+      const { ctx } = chart;
+
+      meta.data.forEach((bar, i) => {
+        if (!bar || bar.hidden) return;
+        const color = datasetColor(dataset, i);
+        const dx = CHART_3D_DX;
+        const dy = CHART_3D_DY;
+
+        if (!horizontal) {
+          const left = bar.x - bar.width / 2;
+          const top = bar.y;
+          const width = bar.width;
+          const height = bar.base - bar.y;
+          if (height <= 0) return;
+
+          ctx.save();
+          ctx.fillStyle = shadeChartColor(color, -0.28);
+          ctx.beginPath();
+          ctx.moveTo(left + width, top);
+          ctx.lineTo(left + width + dx, top + dy);
+          ctx.lineTo(left + width + dx, bar.base + dy);
+          ctx.lineTo(left + width, bar.base);
+          ctx.closePath();
+          ctx.fill();
+
+          ctx.fillStyle = shadeChartColor(color, 0.18);
+          ctx.beginPath();
+          ctx.moveTo(left, top);
+          ctx.lineTo(left + dx, top + dy);
+          ctx.lineTo(left + width + dx, top + dy);
+          ctx.lineTo(left + width, top);
+          ctx.closePath();
+          ctx.fill();
+          ctx.restore();
+        } else {
+          const top = bar.y - bar.height / 2;
+          const left = Math.min(bar.base, bar.x);
+          const width = Math.abs(bar.x - bar.base);
+          const height = bar.height;
+          if (width <= 0) return;
+
+          ctx.save();
+          ctx.fillStyle = shadeChartColor(color, -0.28);
+          ctx.beginPath();
+          ctx.moveTo(bar.x, top);
+          ctx.lineTo(bar.x + dx, top + dy);
+          ctx.lineTo(bar.x + dx, top + height + dy);
+          ctx.lineTo(bar.x, top + height);
+          ctx.closePath();
+          ctx.fill();
+
+          ctx.fillStyle = shadeChartColor(color, 0.18);
+          ctx.beginPath();
+          ctx.moveTo(left, top);
+          ctx.lineTo(left + dx, top + dy);
+          ctx.lineTo(bar.x + dx, top + dy);
+          ctx.lineTo(bar.x, top);
+          ctx.closePath();
+          ctx.fill();
+          ctx.restore();
+        }
+      });
+    }
+
+    function drawPie3DDepth(chart, datasetIndex) {
+      const meta = chart.getDatasetMeta(datasetIndex);
+      const dataset = chart.data.datasets[datasetIndex];
+      const { ctx } = chart;
+
+      meta.data.forEach((arc, i) => {
+        if (!arc || arc.hidden) return;
+        const props = arc.getProps(["x", "y", "startAngle", "endAngle", "outerRadius", "innerRadius"], true);
+        const color = datasetColor(dataset, i);
+
+        for (let d = CHART_3D_DEPTH; d >= 1; d -= 1) {
+          const depthRatio = d / CHART_3D_DEPTH;
+          ctx.save();
+          ctx.fillStyle = shadeChartColor(color, -0.12 - depthRatio * 0.28);
+          ctx.beginPath();
+          ctx.arc(props.x, props.y + d, props.outerRadius, props.startAngle, props.endAngle);
+          ctx.arc(props.x, props.y + d, props.innerRadius, props.endAngle, props.startAngle, true);
+          ctx.closePath();
+          ctx.fill();
+          ctx.restore();
+        }
+      });
+    }
+
+    function drawLine3DDepth(chart, datasetIndex) {
+      const meta = chart.getDatasetMeta(datasetIndex);
+      const dataset = chart.data.datasets[datasetIndex];
+      if (!meta.data.length) return;
+
+      const { ctx, chartArea } = chart;
+      const color = dataset.borderColor || "#7EB8DA";
+      const dx = CHART_3D_DX;
+      const dy = CHART_3D_DY;
+      const points = meta.data.map((el) => ({ x: el.x + dx, y: el.y + dy }));
+
+      ctx.save();
+      ctx.fillStyle = shadeChartColor(color, -0.35);
+      ctx.beginPath();
+      ctx.moveTo(points[0].x, chartArea.bottom + dy);
+      points.forEach((p) => ctx.lineTo(p.x, p.y));
+      ctx.lineTo(points[points.length - 1].x, chartArea.bottom + dy);
+      ctx.closePath();
+      ctx.globalAlpha = 0.45;
+      ctx.fill();
+      ctx.globalAlpha = 1;
+
+      ctx.strokeStyle = shadeChartColor(color, -0.22);
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      points.forEach((p, idx) => {
+        if (idx === 0) ctx.moveTo(p.x, p.y);
+        else ctx.lineTo(p.x, p.y);
+      });
+      ctx.stroke();
+
+      points.forEach((p) => {
+        ctx.fillStyle = shadeChartColor(color, -0.18);
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, 4, 0, Math.PI * 2);
+        ctx.fill();
+      });
+      ctx.restore();
+    }
+
+    const chart3dPlugin = {
+      id: "chart3d",
+      beforeDatasetsDraw(chart, args) {
+        if (chart.config.type === "pie") drawPie3DDepth(chart, args.index);
+        if (chart.config.type === "line") drawLine3DDepth(chart, args.index);
+      },
+      afterDatasetsDraw(chart, args) {
+        if (chart.config.type === "bar") drawBar3DFaces(chart, args.index);
+      }
+    };
+
     const pieSliceLabelsPlugin = {
       id: "pieSliceLabels",
       afterDatasetDraw(chart, args, options) {
@@ -1980,13 +2159,16 @@
       }
     };
 
+    Chart.register(chart3dPlugin);
     Chart.register(pieSliceLabelsPlugin);
 
     function pieChartOptions(isMoney = true) {
       return {
         responsive: true,
         maintainAspectRatio: false,
+        layout: { padding: { top: 8, right: 12, bottom: 20, left: 4 } },
         plugins: {
+          chart3d: true,
           pieSliceLabels: { isMoney },
           legend: {
             position: "right",
@@ -2076,8 +2258,9 @@
       const lineChartOpts = {
         responsive: true,
         maintainAspectRatio: false,
-        layout: { padding: { top: 8, right: 12, bottom: 4, left: 4 } },
+        layout: { padding: { top: 16, right: 12, bottom: 4, left: 4 } },
         plugins: {
+          chart3d: true,
           legend: { display: false },
           tooltip: moneyTooltip
         },
@@ -2096,8 +2279,9 @@
       const verticalBarOpts = {
         responsive: true,
         maintainAspectRatio: false,
-        layout: { padding: { top: 8, right: 20, bottom: 4, left: 4 } },
+        layout: { padding: { top: 16, right: 24, bottom: 4, left: 4 } },
         plugins: {
+          chart3d: true,
           legend: { display: false },
           tooltip: moneyTooltip
         },
@@ -2132,8 +2316,9 @@
         responsive: true,
         maintainAspectRatio: false,
         indexAxis: "y",
-        layout: { padding: { top: 4, right: 16, bottom: 4, left: 4 } },
+        layout: { padding: { top: 12, right: 24, bottom: 4, left: 4 } },
         plugins: {
+          chart3d: true,
           legend: { display: false },
           tooltip: moneyTooltip
         },
