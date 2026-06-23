@@ -917,24 +917,21 @@
       border-spacing: 0;
     }
 
-    .sticky-list-table.has-x-scroll {
+    .sticky-list-table-head {
+      overflow: hidden;
+      max-width: 100%;
+    }
+
+    .sticky-list-table-xscroll {
       overflow-x: auto;
+      max-width: 100%;
       -webkit-overflow-scrolling: touch;
     }
 
-    .sticky-list-table.has-x-scroll table {
+    .sticky-list-table-head table,
+    .sticky-list-table-xscroll table {
       min-width: max-content;
-    }
-
-    .sticky-list-table.has-x-scroll thead th {
-      position: static;
-      top: auto;
-      box-shadow: inset 0 -1px 0 var(--border);
-    }
-
-    .sticky-list-table.has-x-scroll.thead-pinned thead th::before,
-    .sticky-list-table.has-x-scroll.thead-follow thead th::before {
-      display: none;
+      width: 100%;
     }
 
     .sticky-list-table thead th {
@@ -1439,10 +1436,18 @@
               </div>
             </div>
             <div class="sticky-list-table" id="rawdataTableWrap">
-              <table>
-                <thead id="tableHead"></thead>
-                <tbody id="tableBody"></tbody>
-              </table>
+              <div class="sticky-list-table-head">
+                <table>
+                  <colgroup id="rawdataColgroupHead"></colgroup>
+                  <thead id="tableHead"></thead>
+                </table>
+              </div>
+              <div class="sticky-list-table-xscroll">
+                <table>
+                  <colgroup id="rawdataColgroupBody"></colgroup>
+                  <tbody id="tableBody"></tbody>
+                </table>
+              </div>
             </div>
             <div class="pagination" id="rawdataPagination"></div>
           </div>
@@ -1971,36 +1976,113 @@
 
     function renderStockRiskTable(items) {
       const el = document.getElementById("listStockRisk");
-      el.innerHTML = `
-        <div class="sticky-list-table follow-last-row">
-          <table class="stock-risk-table">
-            <thead>
-              <tr>
-                <th>상품</th>
-                <th>카테고리</th>
-                <th>브랜드</th>
-                <th class="num">재고</th>
-                <th class="num">월평균판매</th>
-                <th class="num">커버(개월)</th>
-                <th>상태</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${items.map((item) => `
-                <tr>
-                  <td title="${escapeHtml(item.product_name)}">${escapeHtml(item.product_name)}</td>
-                  <td>${escapeHtml(item.category)}</td>
-                  <td>${escapeHtml(item.brand)}</td>
-                  <td class="num">${formatCount(item.stock_qty)}</td>
-                  <td class="num">${item.monthlyAvg > 0 ? formatCount(Math.round(item.monthlyAvg)) : "-"}</td>
-                  <td class="num">${item.coverMonths !== null ? item.coverMonths.toFixed(1) : "-"}</td>
-                  <td class="status-cell">${statusText(item.rowStatus)}</td>
-                </tr>
-              `).join("")}
-            </tbody>
-          </table>
+      const colgroup = `<colgroup><col><col><col><col class="num"><col class="num"><col class="num"><col></colgroup>`;
+      const headRow = `
+        <th>상품</th>
+        <th>카테고리</th>
+        <th>브랜드</th>
+        <th class="num">재고</th>
+        <th class="num">월평균판매</th>
+        <th class="num">커버(개월)</th>
+        <th>상태</th>
+      `;
+      const bodyRows = items.map((item) => `
+        <tr>
+          <td title="${escapeHtml(item.product_name)}">${escapeHtml(item.product_name)}</td>
+          <td>${escapeHtml(item.category)}</td>
+          <td>${escapeHtml(item.brand)}</td>
+          <td class="num">${formatCount(item.stock_qty)}</td>
+          <td class="num">${item.monthlyAvg > 0 ? formatCount(Math.round(item.monthlyAvg)) : "-"}</td>
+          <td class="num">${item.coverMonths !== null ? item.coverMonths.toFixed(1) : "-"}</td>
+          <td class="status-cell">${statusText(item.rowStatus)}</td>
+        </tr>
+      `).join("");
+      el.innerHTML = buildSplitStickyTable("stock-risk-table", colgroup, headRow, bodyRows, { follow: true });
+      requestAnimationFrame(() => {
+        syncSplitTableColumns(el);
+        initStickyTableScrollSync(el);
+        scheduleStickyListHeaders();
+      });
+    }
+
+    const RANK_TABLE_COLGROUP = `<colgroup>
+      <col class="rank-col"><col><col><col class="num"><col class="num"><col class="num">
+    </colgroup>`;
+
+    function buildSplitStickyTable(className, colgroup, headRow, bodyRows, options = {}) {
+      const followClass = options.follow ? " follow-last-row" : "";
+      return `
+        <div class="sticky-list-table${followClass}">
+          <div class="sticky-list-table-head">
+            <table class="${className}">
+              ${colgroup}
+              <thead><tr>${headRow}</tr></thead>
+            </table>
+          </div>
+          <div class="sticky-list-table-xscroll">
+            <table class="${className}">
+              ${colgroup}
+              <tbody>${bodyRows}</tbody>
+            </table>
+          </div>
         </div>
       `;
+    }
+
+    function initStickyTableScrollSync(root) {
+      const wraps = root
+        ? (root.classList?.contains("sticky-list-table")
+          ? [root]
+          : [...root.querySelectorAll(".sticky-list-table")])
+        : [...document.querySelectorAll(".sticky-list-table")];
+
+      wraps.forEach((wrap) => {
+        const xscroll = wrap.querySelector(".sticky-list-table-xscroll");
+        const headTable = wrap.querySelector(".sticky-list-table-head table");
+        if (!xscroll || !headTable) return;
+        if (wrap._scrollSyncInit) return;
+        wrap._scrollSyncInit = true;
+        xscroll.addEventListener("scroll", () => {
+          headTable.style.transform = xscroll.scrollLeft
+            ? `translateX(-${xscroll.scrollLeft}px)`
+            : "";
+        }, { passive: true });
+      });
+    }
+
+    function syncSplitTableColumns(root) {
+      const wraps = root
+        ? (root.classList?.contains("sticky-list-table")
+          ? [root]
+          : [...root.querySelectorAll(".sticky-list-table")])
+        : [...document.querySelectorAll(".sticky-list-table")];
+
+      wraps.forEach((wrap) => {
+        const headTable = wrap.querySelector(".sticky-list-table-head table");
+        const bodyTable = wrap.querySelector(".sticky-list-table-xscroll table");
+        if (!headTable || !bodyTable) return;
+
+        const ths = [...headTable.querySelectorAll("th")];
+        const firstRow = bodyTable.querySelector("tr");
+        if (!ths.length || !firstRow) return;
+
+        const tds = [...firstRow.querySelectorAll("td")];
+        ths.forEach((th, i) => {
+          const width = Math.max(th.offsetWidth, tds[i]?.offsetWidth || 0);
+          th.style.minWidth = `${width}px`;
+          if (tds[i]) tds[i].style.minWidth = `${width}px`;
+        });
+
+        bodyTable.querySelectorAll("tr").forEach((row) => {
+          [...row.querySelectorAll("td")].forEach((td, i) => {
+            if (ths[i]?.style.minWidth) td.style.minWidth = ths[i].style.minWidth;
+          });
+        });
+
+        const tableWidth = Math.max(headTable.scrollWidth, bodyTable.scrollWidth);
+        headTable.style.width = `${tableWidth}px`;
+        bodyTable.style.width = `${tableWidth}px`;
+      });
     }
 
     function renderProductRankTable(items) {
@@ -2009,34 +2091,30 @@
         el.innerHTML = '<div class="rank-empty">데이터 없음</div>';
         return;
       }
-      el.innerHTML = `
-        <div class="sticky-list-table follow-last-row">
-          <table class="rank-table">
-            <thead>
-              <tr>
-                <th class="rank-col">#</th>
-                <th>상품</th>
-                <th>카테고리</th>
-                <th class="num">매출</th>
-                <th class="num">수량</th>
-                <th class="num">이익률</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${items.map((item, i) => `
-                <tr class="${i < 3 ? "top3" : ""}">
-                  <td class="rank-col">${i + 1}</td>
-                  <td title="${escapeHtml(item.name)}">${escapeHtml(item.name)}</td>
-                  <td>${escapeHtml(item.category || "-")}</td>
-                  <td class="num">${formatMoney(item.sales)}</td>
-                  <td class="num">${formatCount(item.qty)}</td>
-                  <td class="num">${item.marginPct !== null ? formatPct(item.marginPct) : "-"}</td>
-                </tr>
-              `).join("")}
-            </tbody>
-          </table>
-        </div>
+      const headRow = `
+        <th class="rank-col">#</th>
+        <th>상품</th>
+        <th>카테고리</th>
+        <th class="num">매출</th>
+        <th class="num">수량</th>
+        <th class="num">이익률</th>
       `;
+      const bodyRows = items.map((item, i) => `
+        <tr class="${i < 3 ? "top3" : ""}">
+          <td class="rank-col">${i + 1}</td>
+          <td title="${escapeHtml(item.name)}">${escapeHtml(item.name)}</td>
+          <td>${escapeHtml(item.category || "-")}</td>
+          <td class="num">${formatMoney(item.sales)}</td>
+          <td class="num">${formatCount(item.qty)}</td>
+          <td class="num">${item.marginPct !== null ? formatPct(item.marginPct) : "-"}</td>
+        </tr>
+      `).join("");
+      el.innerHTML = buildSplitStickyTable("rank-table", RANK_TABLE_COLGROUP, headRow, bodyRows, { follow: true });
+      requestAnimationFrame(() => {
+        syncSplitTableColumns(el);
+        initStickyTableScrollSync(el);
+        scheduleStickyListHeaders();
+      });
     }
 
     function renderCustomerRankTable(items) {
@@ -2045,34 +2123,30 @@
         el.innerHTML = '<div class="rank-empty">데이터 없음</div>';
         return;
       }
-      el.innerHTML = `
-        <div class="sticky-list-table follow-last-row">
-          <table class="rank-table">
-            <thead>
-              <tr>
-                <th class="rank-col">#</th>
-                <th>고객</th>
-                <th>등급</th>
-                <th>지역</th>
-                <th class="num">매출</th>
-                <th class="num">주문수</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${items.map((item, i) => `
-                <tr class="${i < 3 ? "top3" : ""}">
-                  <td class="rank-col">${i + 1}</td>
-                  <td title="${escapeHtml(item.name)}">${escapeHtml(item.name)}</td>
-                  <td>${escapeHtml(item.tier || "-")}</td>
-                  <td>${escapeHtml(item.city || "-")}</td>
-                  <td class="num">${formatMoney(item.sales)}</td>
-                  <td class="num">${formatCount(item.orderCount)}</td>
-                </tr>
-              `).join("")}
-            </tbody>
-          </table>
-        </div>
+      const headRow = `
+        <th class="rank-col">#</th>
+        <th>고객</th>
+        <th>등급</th>
+        <th>지역</th>
+        <th class="num">매출</th>
+        <th class="num">주문수</th>
       `;
+      const bodyRows = items.map((item, i) => `
+        <tr class="${i < 3 ? "top3" : ""}">
+          <td class="rank-col">${i + 1}</td>
+          <td title="${escapeHtml(item.name)}">${escapeHtml(item.name)}</td>
+          <td>${escapeHtml(item.tier || "-")}</td>
+          <td>${escapeHtml(item.city || "-")}</td>
+          <td class="num">${formatMoney(item.sales)}</td>
+          <td class="num">${formatCount(item.orderCount)}</td>
+        </tr>
+      `).join("");
+      el.innerHTML = buildSplitStickyTable("rank-table", RANK_TABLE_COLGROUP, headRow, bodyRows, { follow: true });
+      requestAnimationFrame(() => {
+        syncSplitTableColumns(el);
+        initStickyTableScrollSync(el);
+        scheduleStickyListHeaders();
+      });
     }
 
     function renderKpiCard(m, key, label, value, sub, valueClass = "") {
@@ -2977,7 +3051,8 @@
     }
 
     function isTableCramped(wrap) {
-      const table = wrap.querySelector("table");
+      const table = wrap.querySelector(".sticky-list-table-xscroll table")
+        || wrap.querySelector("table");
       if (!table) return false;
       return table.scrollWidth > wrap.clientWidth + 2;
     }
@@ -3014,12 +3089,6 @@
         if (!thead || !rows.length) {
           clearFollow();
           wrap.classList.remove("thead-pinned");
-          return;
-        }
-
-        if (cramped) {
-          clearFollow();
-          wrap.classList.remove("thead-pinned", "thead-follow");
           return;
         }
 
@@ -3801,6 +3870,10 @@
       document.getElementById("tableMeta").textContent =
         `${current.fileName} · 총 ${totalRows.toLocaleString()}행 · ${rawdataPage}/${totalPages} 페이지`;
 
+      const colgroupHtml = current.headers.map(() => "<col>").join("");
+      document.getElementById("rawdataColgroupHead").innerHTML = colgroupHtml;
+      document.getElementById("rawdataColgroupBody").innerHTML = colgroupHtml;
+
       document.getElementById("tableHead").innerHTML =
         `<tr>${current.headers.map((h) => {
           const cls = isNumericColumn(h) ? ' class="num"' : "";
@@ -3818,7 +3891,11 @@
         : `<tr><td colspan="${current.headers.length}" style="text-align:center;color:var(--text-muted);">데이터 없음</td></tr>`;
 
       renderRawdataPagination(totalPages, totalRows, start, pageData.length);
-      scheduleStickyListHeaders();
+      requestAnimationFrame(() => {
+        syncSplitTableColumns(document.getElementById("rawdataTableWrap"));
+        initStickyTableScrollSync(document.getElementById("rawdataTableWrap"));
+        scheduleStickyListHeaders();
+      });
     }
 
     function renderRawdataPagination(totalPages, totalRows, start, shown) {
@@ -3948,7 +4025,10 @@
     syncChart3dToggle();
     updateTopbarDashboardActions();
     updateStickyChromeTop();
-    window.addEventListener("resize", updateStickyChromeTop);
+    window.addEventListener("resize", () => {
+      updateStickyChromeTop();
+      syncSplitTableColumns();
+    });
     window.addEventListener("scroll", scheduleStickyListHeaders, { passive: true });
   </script>
 </body>
