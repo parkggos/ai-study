@@ -3081,7 +3081,7 @@
         const ths = thead ? [...thead.querySelectorAll("th")] : [];
         const stickyTarget = headBlock || ths[0];
         const cramped = isTableCramped(wrap);
-        const allowFollow = wrap.classList.contains("follow-last-row") && !cramped;
+        const allowFollow = wrap.classList.contains("follow-last-row");
 
         wrap.classList.toggle("has-x-scroll", cramped);
 
@@ -3125,16 +3125,32 @@
           }
         };
 
+        const applyTailFollow = () => {
+          const lastRow = rows[rows.length - 1];
+          const lastRect = lastRow.getBoundingClientRect();
+
+          if (lastRect.bottom > stickyTop) {
+            applyFollowTop(lastRect.top - headerHeight, lastRect.bottom);
+            return;
+          }
+
+          if (wrapRect.bottom > stickyTop) {
+            applyFollowTop(wrapRect.bottom - headerHeight, wrapRect.bottom);
+            return;
+          }
+
+          clearFollow();
+          wrap.classList.remove("thead-pinned");
+        };
+
         if (!allowFollow || rows.length === 1) {
           clearFollow();
           applyPinned();
           return;
         }
 
-        const lastRow = rows[rows.length - 1];
         const secondLastRow = rows[rows.length - 2];
         const secondLastPast = secondLastRow.getBoundingClientRect().bottom <= headerBottom;
-        const lastRowVisible = lastRow.getBoundingClientRect().bottom > stickyTop;
 
         if (!secondLastPast) {
           clearFollow();
@@ -3142,14 +3158,7 @@
           return;
         }
 
-        if (lastRowVisible) {
-          const lastRect = lastRow.getBoundingClientRect();
-          applyFollowTop(lastRect.top - headerHeight, lastRect.bottom);
-          return;
-        }
-
-        clearFollow();
-        wrap.classList.remove("thead-pinned");
+        applyTailFollow();
       });
     }
 
