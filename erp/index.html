@@ -942,6 +942,14 @@
       pointer-events: none;
     }
 
+    .sticky-list-table.thead-follow thead th {
+      box-shadow: inset 0 -1px 0 var(--border);
+    }
+
+    .sticky-list-table.thead-follow thead th::before {
+      display: none;
+    }
+
     .sticky-list-table tbody tr:last-child td:first-child {
       border-bottom-left-radius: calc(var(--radius) - 1px);
     }
@@ -1930,7 +1938,7 @@
     function renderStockRiskTable(items) {
       const el = document.getElementById("listStockRisk");
       el.innerHTML = `
-        <div class="sticky-list-table">
+        <div class="sticky-list-table follow-last-row">
           <table class="stock-risk-table">
             <thead>
               <tr>
@@ -1968,7 +1976,7 @@
         return;
       }
       el.innerHTML = `
-        <div class="sticky-list-table">
+        <div class="sticky-list-table follow-last-row">
           <table class="rank-table">
             <thead>
               <tr>
@@ -2004,7 +2012,7 @@
         return;
       }
       el.innerHTML = `
-        <div class="sticky-list-table">
+        <div class="sticky-list-table follow-last-row">
           <table class="rank-table">
             <thead>
               <tr>
@@ -2950,8 +2958,62 @@
       document.documentElement.style.setProperty("--sticky-chrome-top", `${stickyTop}px`);
 
       document.querySelectorAll(".sticky-list-table").forEach((wrap) => {
-        const isPinned = wrap.getBoundingClientRect().top < stickyTop - 0.5;
-        wrap.classList.toggle("thead-pinned", isPinned);
+        const thead = wrap.querySelector("thead");
+        const rows = [...wrap.querySelectorAll("tbody tr")];
+        const ths = thead ? [...thead.querySelectorAll("th")] : [];
+        const allowFollow = wrap.classList.contains("follow-last-row");
+
+        const clearFollow = () => {
+          wrap.classList.remove("thead-follow");
+          ths.forEach((th) => th.style.removeProperty("top"));
+        };
+
+        if (!thead || !rows.length) {
+          clearFollow();
+          wrap.classList.remove("thead-pinned");
+          return;
+        }
+
+        const headerHeight = thead.offsetHeight;
+        const headerBottom = stickyTop + headerHeight;
+        const firstTh = ths[0];
+
+        if (!allowFollow || rows.length === 1) {
+          clearFollow();
+          const isPinned = wrap.getBoundingClientRect().top < stickyTop - 0.5
+            && firstTh && firstTh.getBoundingClientRect().top <= stickyTop + 0.5;
+          wrap.classList.toggle("thead-pinned", isPinned);
+          return;
+        }
+
+        const lastRow = rows[rows.length - 1];
+        const secondLastRow = rows[rows.length - 2];
+        const secondLastPast = secondLastRow.getBoundingClientRect().bottom <= headerBottom;
+        const lastRowVisible = lastRow.getBoundingClientRect().bottom > stickyTop;
+
+        if (!secondLastPast) {
+          clearFollow();
+          const isPinned = wrap.getBoundingClientRect().top < stickyTop - 0.5
+            && firstTh && firstTh.getBoundingClientRect().top <= stickyTop + 0.5;
+          wrap.classList.toggle("thead-pinned", isPinned);
+          return;
+        }
+
+        if (lastRowVisible) {
+          wrap.classList.add("thead-follow");
+          wrap.classList.remove("thead-pinned");
+          const followTop = Math.max(
+            stickyTop,
+            lastRow.getBoundingClientRect().top - headerHeight
+          );
+          ths.forEach((th) => {
+            th.style.top = `${followTop}px`;
+          });
+          return;
+        }
+
+        clearFollow();
+        wrap.classList.remove("thead-pinned");
       });
     }
 
