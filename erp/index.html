@@ -2043,7 +2043,9 @@
       const moneyTooltip = {
         callbacks: {
           label(ctx) {
-            const val = ctx.parsed.y ?? ctx.parsed.x ?? 0;
+            const val = ctx.chart.options.indexAxis === "y"
+              ? (ctx.parsed.x ?? ctx.raw ?? 0)
+              : (ctx.parsed.y ?? ctx.raw ?? 0);
             return ` ${formatMoney(val)}`;
           }
         }
