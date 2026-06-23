@@ -778,6 +778,7 @@
       display: grid;
       grid-template-columns: 1fr 1fr;
       gap: 20px;
+      min-width: 0;
     }
 
     .chart-grid .chart-card.full { grid-column: 1 / -1; }
@@ -788,6 +789,8 @@
       border-radius: var(--radius);
       padding: 20px 24px 16px;
       box-shadow: var(--shadow);
+      min-width: 0;
+      overflow: visible;
     }
 
     .chart-card .card-title { margin-bottom: 12px; }
@@ -795,6 +798,9 @@
     .chart-wrap {
       position: relative;
       height: 280px;
+      width: 100%;
+      min-width: 0;
+      overflow: visible;
     }
 
     .chart-wrap.tall { height: 320px; }
@@ -1957,9 +1963,33 @@
       destroyDashboardCharts();
 
       const chartColors = ["#2563eb", "#7c3aed", "#16a34a", "#d97706", "#dc2626", "#0891b2", "#db2777", "#4f46e5"];
+
+      const valueAxisTicks = {
+        callback(v) {
+          if (v >= 1e8) return (v / 1e8).toFixed(0) + "억";
+          if (v >= 1e4) return (v / 1e4).toFixed(0) + "만";
+          return v.toLocaleString("ko-KR");
+        }
+      };
+
+      const valueAxis = {
+        ticks: valueAxisTicks,
+        grid: { color: "#f1f5f9" },
+        grace: "8%"
+      };
+
+      const categoryAxis = {
+        grid: { display: false },
+        offset: true,
+        ticks: { autoSkip: true, maxRotation: 45, minRotation: 0 }
+      };
+
+      const chartLayoutPadding = { top: 4, right: 24, bottom: 4, left: 8 };
+
       const commonOpts = {
         responsive: true,
         maintainAspectRatio: false,
+        layout: { padding: chartLayoutPadding },
         plugins: {
           legend: { display: false },
           tooltip: {
@@ -1971,18 +2001,21 @@
             }
           }
         },
+        datasets: {
+          bar: { clip: false, categoryPercentage: 0.75, barPercentage: 0.85 }
+        },
         scales: {
-          y: {
-            ticks: {
-              callback(v) {
-                if (v >= 1e8) return (v / 1e8).toFixed(0) + "억";
-                if (v >= 1e4) return (v / 1e4).toFixed(0) + "만";
-                return v.toLocaleString("ko-KR");
-              }
-            },
-            grid: { color: "#f1f5f9" }
-          },
-          x: { grid: { display: false } }
+          y: valueAxis,
+          x: categoryAxis
+        }
+      };
+
+      const horizontalBarOpts = {
+        ...commonOpts,
+        indexAxis: "y",
+        scales: {
+          x: { ...valueAxis, grace: "8%" },
+          y: { ...categoryAxis, offset: true }
         }
       };
 
@@ -2015,16 +2048,9 @@
             borderRadius: 6
           }]
         },
-        options: {
-          ...commonOpts,
-          indexAxis: m.categoryEntries.length > 6 ? "y" : "x",
-          scales: m.categoryEntries.length > 6
-            ? {
-                x: commonOpts.scales.y,
-                y: { grid: { display: false } }
-              }
-            : commonOpts.scales
-        }
+        options: m.categoryEntries.length > 6
+          ? horizontalBarOpts
+          : commonOpts
       });
 
       dashboardCharts.channel = new Chart(document.getElementById("chartChannel"), {
@@ -2094,14 +2120,7 @@
             borderRadius: 6
           }]
         },
-        options: {
-          ...commonOpts,
-          indexAxis: "y",
-          scales: {
-            x: commonOpts.scales.y,
-            y: { grid: { display: false } }
-          }
-        }
+        options: horizontalBarOpts
       });
 
       dashboardCharts.region = new Chart(document.getElementById("chartRegion"), {
