@@ -904,6 +904,11 @@
       box-shadow: inset 0 -1px 0 var(--border);
     }
 
+    .dashboard-list-table.thead-scroll thead th {
+      position: static;
+      box-shadow: none;
+    }
+
     .stock-risk-table th.num,
     .stock-risk-table td.num,
     .rank-table th.num,
@@ -2581,6 +2586,37 @@
       const topbarH = topbar?.offsetHeight ?? 72;
       document.documentElement.style.setProperty("--nav-height", `${navH}px`);
       document.documentElement.style.setProperty("--sticky-chrome-top", `${navH + topbarH}px`);
+      scheduleDashboardListStickyHeaders();
+    }
+
+    let stickyHeaderTicking = false;
+
+    function updateDashboardListStickyHeaders() {
+      const chromeTop = parseFloat(
+        getComputedStyle(document.documentElement).getPropertyValue("--sticky-chrome-top")
+      ) || 128;
+
+      document.querySelectorAll(".dashboard-list-table").forEach((wrap) => {
+        const thead = wrap.querySelector("thead");
+        const rows = [...wrap.querySelectorAll("tbody tr")];
+        if (!thead || !rows.length) {
+          wrap.classList.remove("thead-scroll");
+          return;
+        }
+
+        const headerBottom = chromeTop + thead.getBoundingClientRect().height;
+        const rowsBelowHeader = rows.filter((row) => row.getBoundingClientRect().bottom > headerBottom + 1);
+        wrap.classList.toggle("thead-scroll", rowsBelowHeader.length === 1);
+      });
+    }
+
+    function scheduleDashboardListStickyHeaders() {
+      if (stickyHeaderTicking) return;
+      stickyHeaderTicking = true;
+      requestAnimationFrame(() => {
+        updateDashboardListStickyHeaders();
+        stickyHeaderTicking = false;
+      });
     }
 
     function switchPanel(panelId) {
@@ -3133,6 +3169,7 @@
     renderRawData();
     updateStickyChromeTop();
     window.addEventListener("resize", updateStickyChromeTop);
+    window.addEventListener("scroll", scheduleDashboardListStickyHeaders, { passive: true });
   </script>
 </body>
 </html>
