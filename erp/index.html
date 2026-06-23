@@ -2013,7 +2013,12 @@
           tooltip: moneyTooltip
         },
         datasets: {
-          bar: { clip: false }
+          bar: {
+            clip: false,
+            categoryPercentage: 0.5,
+            barPercentage: 0.7,
+            maxBarThickness: 44
+          }
         },
         scales: {
           y: {
