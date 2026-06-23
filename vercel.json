@@ -1,8 +1,17 @@
 {
+  "functions": {
+    "api/erp-report.js": {
+      "maxDuration": 60
+    },
+    "api/news-report.js": {
+      "maxDuration": 60
+    }
+  },
   "rewrites": [
     { "source": "/", "destination": "/lotto/index.html" },
     { "source": "/lotto", "destination": "/lotto/index.html" },
     { "source": "/news", "destination": "/news/index.html" },
-    { "source": "/amongus-defense", "destination": "/amongus-defense/index.html" }
+    { "source": "/amongus-defense", "destination": "/amongus-defense/index.html" },
+    { "source": "/erp", "destination": "/erp/index.html" }
   ]
 }

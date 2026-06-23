@@ -1,0 +1,2686 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ERP 데이터 분석</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.2/html2pdf.bundle.min.js"></script>
+  <style>
+    :root {
+      --sidebar-bg: #0f172a;
+      --sidebar-text: #94a3b8;
+      --sidebar-active: #ffffff;
+      --sidebar-active-bg: #1e293b;
+      --primary: #2563eb;
+      --primary-hover: #1d4ed8;
+      --primary-light: #eff6ff;
+      --bg: #f1f5f9;
+      --card: #ffffff;
+      --text: #0f172a;
+      --text-muted: #64748b;
+      --border: #e2e8f0;
+      --success: #16a34a;
+      --success-bg: #f0fdf4;
+      --warning: #d97706;
+      --error: #dc2626;
+      --radius: 10px;
+      --shadow: 0 1px 3px rgba(15, 23, 42, 0.08);
+      --shadow-lg: 0 10px 40px rgba(15, 23, 42, 0.1);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+      min-height: 100vh;
+    }
+
+    .app {
+      display: flex;
+      min-height: 100vh;
+    }
+
+    /* Sidebar */
+    .sidebar {
+      width: 240px;
+      background: var(--sidebar-bg);
+      color: var(--sidebar-text);
+      display: flex;
+      flex-direction: column;
+      flex-shrink: 0;
+      position: fixed;
+      top: 0;
+      left: 0;
+      bottom: 0;
+      z-index: 100;
+    }
+
+    .sidebar-brand {
+      padding: 24px 20px;
+      border-bottom: 1px solid #1e293b;
+    }
+
+    .sidebar-brand h1 {
+      font-size: 17px;
+      font-weight: 700;
+      color: #fff;
+      letter-spacing: -0.02em;
+    }
+
+    .sidebar-brand p {
+      font-size: 12px;
+      color: var(--sidebar-text);
+      margin-top: 4px;
+    }
+
+    .nav {
+      padding: 16px 12px;
+      flex: 1;
+    }
+
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      width: 100%;
+      padding: 10px 12px;
+      border: none;
+      background: none;
+      color: var(--sidebar-text);
+      font-size: 14px;
+      font-weight: 500;
+      font-family: inherit;
+      border-radius: 8px;
+      cursor: pointer;
+      text-align: left;
+      transition: background 0.15s, color 0.15s;
+      margin-bottom: 4px;
+    }
+
+    .nav-item:hover {
+      background: var(--sidebar-active-bg);
+      color: #cbd5e1;
+    }
+
+    .nav-item.active {
+      background: var(--sidebar-active-bg);
+      color: var(--sidebar-active);
+    }
+
+    .nav-icon {
+      width: 20px;
+      height: 20px;
+      flex-shrink: 0;
+      opacity: 0.8;
+    }
+
+    .nav-item.active .nav-icon { opacity: 1; }
+
+    /* Main */
+    .main {
+      flex: 1;
+      margin-left: 240px;
+      min-height: 100vh;
+    }
+
+    .topbar {
+      background: var(--card);
+      border-bottom: 1px solid var(--border);
+      padding: 16px 32px;
+      position: sticky;
+      top: 0;
+      z-index: 50;
+    }
+
+    .topbar h2 {
+      font-size: 20px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+
+    .topbar p {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    .content {
+      padding: 28px 32px 48px;
+      max-width: 1400px;
+    }
+
+    .panel { display: none; }
+    .panel.active { display: block; }
+
+    /* Cards */
+    .card {
+      background: var(--card);
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow);
+      padding: 24px;
+      margin-bottom: 20px;
+    }
+
+    .card-title {
+      font-size: 15px;
+      font-weight: 600;
+      margin-bottom: 16px;
+    }
+
+    /* Upload grid */
+    .upload-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 16px;
+    }
+
+    .upload-zone {
+      border: 2px dashed var(--border);
+      border-radius: var(--radius);
+      padding: 28px 20px;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color 0.2s, background 0.2s;
+      position: relative;
+      background: var(--card);
+    }
+
+    .upload-zone:hover,
+    .upload-zone.dragover {
+      border-color: var(--primary);
+      background: var(--primary-light);
+    }
+
+    .upload-zone.has-data {
+      border-color: var(--success);
+      border-style: solid;
+      background: var(--success-bg);
+    }
+
+    .upload-zone input[type="file"] {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      cursor: pointer;
+    }
+
+    .upload-type {
+      display: inline-block;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--primary);
+      background: var(--primary-light);
+      padding: 3px 8px;
+      border-radius: 4px;
+      margin-bottom: 10px;
+    }
+
+    .upload-zone.has-data .upload-type {
+      color: var(--success);
+      background: #dcfce7;
+    }
+
+    .upload-icon {
+      width: 40px;
+      height: 40px;
+      margin: 0 auto 12px;
+      color: var(--text-muted);
+    }
+
+    .upload-zone.has-data .upload-icon { color: var(--success); }
+
+    .upload-label {
+      font-size: 15px;
+      font-weight: 600;
+      margin-bottom: 6px;
+    }
+
+    .upload-hint {
+      font-size: 12px;
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
+
+    .upload-status {
+      margin-top: 12px;
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--success);
+      display: none;
+    }
+
+    .upload-zone.has-data .upload-status { display: block; }
+
+    /* Summary bar */
+    .summary-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-bottom: 24px;
+    }
+
+    .summary-chip {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      padding: 8px 16px;
+      font-size: 13px;
+    }
+
+    .summary-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--border);
+    }
+
+    .summary-dot.loaded { background: var(--success); }
+
+    .summary-chip strong { font-weight: 600; }
+
+    /* Actions */
+    .actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 8px;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 9px 18px;
+      font-size: 14px;
+      font-weight: 500;
+      font-family: inherit;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--card);
+      color: var(--text);
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s;
+    }
+
+    .btn:hover { background: var(--bg); }
+
+    .btn-primary {
+      background: var(--primary);
+      border-color: var(--primary);
+      color: #fff;
+    }
+
+    .btn-primary:hover { background: var(--primary-hover); }
+
+    .btn-danger {
+      color: var(--error);
+      border-color: #fecaca;
+    }
+
+    .btn-danger:hover { background: #fef2f2; }
+
+    /* Placeholder */
+    .placeholder {
+      text-align: center;
+      padding: 64px 24px;
+      color: var(--text-muted);
+    }
+
+    .placeholder-icon {
+      width: 56px;
+      height: 56px;
+      margin: 0 auto 16px;
+      opacity: 0.4;
+    }
+
+    .placeholder h3 {
+      font-size: 18px;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 8px;
+    }
+
+    .placeholder p { font-size: 14px; max-width: 400px; margin: 0 auto; }
+
+    /* Data table */
+    .table-wrap {
+      overflow-x: auto;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+
+    th {
+      background: var(--bg);
+      text-align: left;
+      padding: 10px 14px;
+      font-weight: 600;
+      color: var(--text-muted);
+      border-bottom: 1px solid var(--border);
+      white-space: nowrap;
+    }
+
+    td {
+      padding: 9px 14px;
+      border-bottom: 1px solid var(--border);
+      white-space: nowrap;
+      max-width: 200px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: #f8fafc; }
+
+    th.num, td.num {
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .data-tabs {
+      display: flex;
+      gap: 4px;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+    }
+
+    .data-tab {
+      padding: 7px 14px;
+      font-size: 13px;
+      font-weight: 500;
+      font-family: inherit;
+      border: 1px solid var(--border);
+      background: var(--card);
+      border-radius: 8px;
+      cursor: pointer;
+      color: var(--text-muted);
+      transition: all 0.15s;
+    }
+
+    .data-tab:hover { border-color: #cbd5e1; color: var(--text); }
+
+    .data-tab.active {
+      background: var(--primary);
+      border-color: var(--primary);
+      color: #fff;
+    }
+
+    .data-tab .count {
+      display: inline-block;
+      margin-left: 4px;
+      opacity: 0.7;
+      font-size: 11px;
+    }
+
+    .table-meta {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-bottom: 12px;
+    }
+
+    .rawdata-desc {
+      font-size: 14px;
+      color: var(--text-muted);
+      margin-bottom: 20px;
+    }
+
+    .file-select-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+
+    .file-select-card {
+      background: var(--card);
+      border: 2px solid var(--border);
+      border-radius: var(--radius);
+      padding: 18px 16px;
+      cursor: pointer;
+      transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
+      text-align: left;
+      font-family: inherit;
+      width: 100%;
+    }
+
+    .file-select-card:hover {
+      border-color: #cbd5e1;
+      box-shadow: var(--shadow);
+    }
+
+    .file-select-card.active {
+      border-color: var(--primary);
+      background: var(--primary-light);
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+    }
+
+    .file-select-card:not(.loaded) {
+      opacity: 0.75;
+    }
+
+    .file-select-label {
+      font-size: 15px;
+      font-weight: 600;
+      margin-bottom: 4px;
+      color: var(--text);
+    }
+
+    .file-select-hint {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-bottom: 10px;
+    }
+
+    .file-select-status {
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text-muted);
+    }
+
+    .file-select-status.loaded { color: var(--success); }
+    .file-select-status.empty { color: var(--warning); }
+
+    .rawdata-table-card { margin-bottom: 0; }
+
+    .rawdata-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+    }
+
+    .rawdata-header .card-title { margin-bottom: 4px; }
+
+    .pagination {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      margin-top: 16px;
+      flex-wrap: wrap;
+    }
+
+    .pagination-info {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-right: 8px;
+    }
+
+    .page-btn {
+      min-width: 36px;
+      height: 36px;
+      padding: 0 10px;
+      border: 1px solid var(--border);
+      background: var(--card);
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 500;
+      font-family: inherit;
+      cursor: pointer;
+      color: var(--text);
+      transition: background 0.15s, border-color 0.15s;
+    }
+
+    .page-btn:hover:not(:disabled) { background: var(--bg); border-color: #cbd5e1; }
+    .page-btn.active { background: var(--primary); border-color: var(--primary); color: #fff; }
+    .page-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    .rawdata-empty-msg {
+      text-align: center;
+      padding: 48px 24px;
+      color: var(--text-muted);
+      font-size: 14px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+    }
+
+    @media (max-width: 900px) {
+      .file-select-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+
+    @media (max-width: 500px) {
+      .file-select-grid { grid-template-columns: 1fr; }
+    }
+
+    /* Toast */
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: var(--sidebar-bg);
+      color: #fff;
+      padding: 12px 20px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 500;
+      box-shadow: var(--shadow-lg);
+      transform: translateY(80px);
+      opacity: 0;
+      transition: transform 0.3s, opacity 0.3s;
+      z-index: 200;
+      max-width: 360px;
+    }
+
+    .toast.show {
+      transform: translateY(0);
+      opacity: 1;
+    }
+
+    .toast.error { background: var(--error); }
+
+    /* Dashboard */
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 14px;
+      margin-bottom: 20px;
+    }
+
+    .kpi-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 32px 20px 18px;
+      box-shadow: var(--shadow);
+      border-left: 3px solid var(--border);
+      position: relative;
+    }
+
+    .kpi-card.status-normal { border-left-color: #16a34a; }
+    .kpi-card.status-warning { border-left-color: #d97706; }
+    .kpi-card.status-critical { border-left-color: #dc2626; }
+
+    .kpi-status-label {
+      position: absolute;
+      top: 10px;
+      right: 14px;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+      line-height: 1;
+    }
+
+    .kpi-status-label.normal { color: #15803d; }
+    .kpi-status-label.warning { color: #b45309; }
+    .kpi-status-label.critical { color: #b91c1c; }
+
+    .kpi-top {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+
+    .kpi-top .kpi-label { margin-bottom: 0; }
+
+    .status-badge {
+      display: inline-block;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 999px;
+      white-space: nowrap;
+      flex-shrink: 0;
+      line-height: 1.4;
+    }
+
+    .status-badge.normal { background: #dcfce7; color: #15803d; }
+    .status-badge.warning { background: #fef3c7; color: #b45309; }
+    .status-badge.critical { background: #fee2e2; color: #b91c1c; }
+
+    .status-text {
+      font-size: 13px;
+      font-weight: 700;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    .status-text.normal { color: #15803d; }
+    .status-text.warning { color: #b45309; }
+    .status-text.critical { color: #b91c1c; }
+
+    .card-title-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+
+    .card-title-row .card-title { margin-bottom: 0; }
+
+    .rank-item .status-badge {
+      margin-left: 8px;
+      flex-shrink: 0;
+    }
+
+    .rank-item-right {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 4px;
+      flex-shrink: 0;
+    }
+
+    .kpi-label {
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+    }
+
+    .kpi-value {
+      font-size: 22px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      line-height: 1.2;
+    }
+
+    .kpi-value.money { color: var(--primary); }
+    .kpi-value.pct { color: #7c3aed; }
+    .kpi-value.count { color: var(--success); }
+    .kpi-value.warn { color: var(--warning); }
+
+    .kpi-sub {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 6px;
+    }
+
+    .chart-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+
+    .chart-grid .chart-card.full { grid-column: 1 / -1; }
+
+    .chart-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px 24px 16px;
+      box-shadow: var(--shadow);
+    }
+
+    .chart-card .card-title { margin-bottom: 12px; }
+
+    .chart-wrap {
+      position: relative;
+      height: 280px;
+    }
+
+    .chart-wrap.tall { height: 320px; }
+
+    .list-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      margin-top: 20px;
+    }
+
+    .list-grid .chart-card.full { grid-column: 1 / -1; }
+
+    .rank-list {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+    }
+
+    .rank-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .rank-item:last-child { border-bottom: none; }
+
+    .rank-num {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: var(--bg);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      font-weight: 700;
+      flex-shrink: 0;
+      color: var(--text-muted);
+    }
+
+    .rank-num.top3 {
+      background: var(--primary);
+      color: #fff;
+    }
+
+    .rank-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .rank-name {
+      font-size: 13px;
+      font-weight: 500;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .rank-sub {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    .rank-value {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--primary);
+      flex-shrink: 0;
+      text-align: right;
+    }
+
+    .rank-value.warn { color: var(--warning); }
+
+    .rank-empty {
+      text-align: center;
+      padding: 24px;
+      color: var(--text-muted);
+      font-size: 13px;
+    }
+
+    /* Report */
+    .report-toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 20px;
+      align-items: center;
+    }
+
+    .report-toolbar .report-meta {
+      flex: 1;
+      font-size: 13px;
+      color: var(--text-muted);
+      min-width: 200px;
+    }
+
+    .report-loading {
+      text-align: center;
+      padding: 64px 24px;
+      color: var(--text-muted);
+    }
+
+    .report-loading .spinner {
+      width: 40px;
+      height: 40px;
+      border: 3px solid var(--border);
+      border-top-color: var(--primary);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin: 0 auto 16px;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .report-document {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 40px 48px;
+      box-shadow: var(--shadow);
+      max-width: 900px;
+    }
+
+    .report-doc-header {
+      border-bottom: 2px solid var(--primary);
+      padding-bottom: 20px;
+      margin-bottom: 28px;
+    }
+
+    .report-doc-badge {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--primary);
+      margin-bottom: 8px;
+    }
+
+    .report-doc-title {
+      font-size: 26px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      line-height: 1.3;
+      margin-bottom: 8px;
+    }
+
+    .report-doc-date {
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+
+    .report-block {
+      margin-bottom: 28px;
+    }
+
+    .report-block h3 {
+      font-size: 17px;
+      font-weight: 700;
+      margin-bottom: 12px;
+      color: var(--text);
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .report-block p {
+      font-size: 14px;
+      line-height: 1.75;
+      color: #334155;
+      margin-bottom: 12px;
+    }
+
+    .report-block p:last-child { margin-bottom: 0; }
+
+    .report-list {
+      margin: 0;
+      padding-left: 20px;
+    }
+
+    .report-list li {
+      font-size: 14px;
+      line-height: 1.7;
+      color: #334155;
+      margin-bottom: 8px;
+    }
+
+    .report-list.risk li { color: #b45309; }
+    .report-list.findings li { color: #1e40af; }
+
+    .report-summary-box {
+      background: var(--primary-light);
+      border-radius: var(--radius);
+      padding: 20px 24px;
+      margin-bottom: 28px;
+    }
+
+    .report-summary-box h3 {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--primary);
+      margin-bottom: 10px;
+      border: none;
+      padding: 0;
+    }
+
+    .report-summary-box p {
+      margin: 0;
+      font-size: 15px;
+      line-height: 1.75;
+    }
+
+    .report-footer {
+      margin-top: 32px;
+      padding-top: 16px;
+      border-top: 1px solid var(--border);
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    @media (max-width: 768px) {
+      .report-document { padding: 24px 20px; }
+      .report-doc-title { font-size: 22px; }
+    }
+
+    @media (max-width: 900px) {
+      .chart-grid { grid-template-columns: 1fr; }
+      .chart-grid .chart-card.full { grid-column: auto; }
+      .list-grid { grid-template-columns: 1fr; }
+      .list-grid .chart-card.full { grid-column: auto; }
+    }
+
+    @media (max-width: 768px) {
+      .sidebar {
+        width: 100%;
+        position: relative;
+        flex-direction: row;
+        flex-wrap: wrap;
+      }
+
+      .sidebar-brand { flex: 1; min-width: 160px; }
+      .nav {
+        display: flex;
+        flex-wrap: wrap;
+        padding: 8px;
+        width: 100%;
+      }
+
+      .nav-item { flex: 1; min-width: 120px; justify-content: center; font-size: 13px; }
+      .main { margin-left: 0; }
+      .content { padding: 20px 16px 32px; }
+      .topbar { padding: 14px 16px; }
+      .app { flex-direction: column; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <div class="sidebar-brand">
+        <h1>ERP 분석</h1>
+        <p>데이터 대시보드 &amp; 보고서</p>
+      </div>
+      <nav class="nav" role="navigation">
+        <button class="nav-item active" data-panel="upload">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          데이터 입력
+        </button>
+        <button class="nav-item" data-panel="dashboard">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+          대시보드
+        </button>
+        <button class="nav-item" data-panel="report">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+          분석보고서
+        </button>
+        <button class="nav-item" data-panel="rawdata">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>
+          원본 데이터
+        </button>
+      </nav>
+    </aside>
+
+    <div class="main">
+      <header class="topbar">
+        <h2 id="pageTitle">데이터 입력</h2>
+        <p id="pageDesc">CSV 파일을 업로드하여 ERP 데이터를 불러옵니다.</p>
+      </header>
+
+      <div class="content">
+        <!-- 데이터 입력 -->
+        <section class="panel active" id="panel-upload">
+          <div class="summary-bar" id="summaryBar"></div>
+
+          <div class="card">
+            <div class="card-title">파일 업로드</div>
+            <p style="font-size:13px;color:var(--text-muted);margin-bottom:20px;">
+              각 데이터 유형별 CSV 파일을 드래그 앤 드롭하거나 클릭하여 선택하세요.
+            </p>
+            <div class="upload-grid" id="uploadGrid"></div>
+          </div>
+
+          <div class="actions">
+            <button class="btn btn-primary" id="btnLoadSample">샘플 데이터 불러오기</button>
+            <button class="btn btn-danger" id="btnClearAll">전체 데이터 삭제</button>
+          </div>
+        </section>
+
+        <!-- 대시보드 -->
+        <section class="panel" id="panel-dashboard">
+          <div class="placeholder" id="dashboardPlaceholder">
+            <svg class="placeholder-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+            <h3>데이터 없음</h3>
+            <p>주문·주문상세 데이터를 업로드하면 대시보드 KPI와 차트가 표시됩니다.</p>
+          </div>
+          <div id="dashboardContent" style="display:none;">
+            <div class="kpi-grid" id="kpiGrid"></div>
+            <div class="chart-grid">
+              <div class="chart-card full">
+                <div class="card-title">월별 매출 추이</div>
+                <div class="chart-wrap tall"><canvas id="chartMonthly"></canvas></div>
+              </div>
+              <div class="chart-card">
+                <div class="card-title">카테고리별 매출</div>
+                <div class="chart-wrap"><canvas id="chartCategory"></canvas></div>
+              </div>
+              <div class="chart-card">
+                <div class="card-title">채널별 매출</div>
+                <div class="chart-wrap"><canvas id="chartChannel"></canvas></div>
+              </div>
+            </div>
+            <div class="chart-grid" style="margin-top:20px;">
+              <div class="chart-card">
+                <div class="card-title">결제수단별 매출</div>
+                <div class="chart-wrap"><canvas id="chartPayment"></canvas></div>
+              </div>
+              <div class="chart-card">
+                <div class="card-title">고객 등급별 매출</div>
+                <div class="chart-wrap"><canvas id="chartTier"></canvas></div>
+              </div>
+              <div class="chart-card">
+                <div class="card-title">주문 상태 분포</div>
+                <div class="chart-wrap"><canvas id="chartOrderStatus"></canvas></div>
+              </div>
+              <div class="chart-card">
+                <div class="card-title">브랜드별 매출 TOP</div>
+                <div class="chart-wrap"><canvas id="chartBrand"></canvas></div>
+              </div>
+              <div class="chart-card full">
+                <div class="card-title">지역별 매출 TOP</div>
+                <div class="chart-wrap"><canvas id="chartRegion"></canvas></div>
+              </div>
+            </div>
+            <div class="list-grid">
+              <div class="chart-card">
+                <div class="card-title-row">
+                  <div class="card-title">상품 순위 (매출 TOP 10)</div>
+                  <span id="listProductsStatus"></span>
+                </div>
+                <ol class="rank-list" id="listProducts"></ol>
+              </div>
+              <div class="chart-card">
+                <div class="card-title-row">
+                  <div class="card-title">상위 고객 (매출 TOP 10)</div>
+                  <span id="listCustomersStatus"></span>
+                </div>
+                <ol class="rank-list" id="listCustomers"></ol>
+              </div>
+              <div class="chart-card full">
+                <div class="card-title-row">
+                  <div class="card-title">재고 위험 품목</div>
+                  <span id="listStockRiskStatus"></span>
+                </div>
+                <ol class="rank-list" id="listStockRisk"></ol>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- 분석보고서 -->
+        <section class="panel" id="panel-report">
+          <div class="placeholder" id="reportPlaceholder">
+            <svg class="placeholder-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+            <h3>데이터 없음</h3>
+            <p>주문·주문상세 데이터를 업로드하면 Gemini AI가 분석 보고서를 생성합니다.</p>
+          </div>
+          <div id="reportContent" style="display:none;">
+            <div class="report-toolbar">
+              <span class="report-meta" id="reportMeta"></span>
+              <button type="button" class="btn btn-primary" id="btnRegenerateReport">보고서 재생성</button>
+              <button type="button" class="btn" id="btnDownloadPdf">PDF 다운로드</button>
+              <button type="button" class="btn" id="btnDownloadWord">Word 다운로드</button>
+            </div>
+            <div class="report-loading" id="reportLoading" style="display:none;">
+              <div class="spinner"></div>
+              <p>Gemini AI가 분석 보고서를 작성 중입니다…</p>
+              <p style="font-size:12px;margin-top:8px;">30초~1분 정도 소요될 수 있습니다.</p>
+            </div>
+            <div class="report-document" id="reportDocument"></div>
+          </div>
+        </section>
+
+        <!-- 원본 데이터 -->
+        <section class="panel" id="panel-rawdata">
+          <p class="rawdata-desc">업로드된 CSV 원본 데이터를 유형별로 선택하여 목록으로 확인할 수 있습니다.</p>
+          <div class="file-select-grid" id="fileSelectGrid"></div>
+          <div class="card rawdata-table-card" id="rawdataTableCard" style="display:none;">
+            <div class="rawdata-header">
+              <div>
+                <div class="card-title" id="rawdataFileTitle">상품 데이터</div>
+                <div class="table-meta" id="tableMeta"></div>
+              </div>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead id="tableHead"></thead>
+                <tbody id="tableBody"></tbody>
+              </table>
+            </div>
+            <div class="pagination" id="rawdataPagination"></div>
+          </div>
+          <div class="rawdata-empty-msg" id="rawdataNoDataMsg" style="display:none;">
+            선택한 데이터가 아직 업로드되지 않았습니다. 데이터 입력 메뉴에서 CSV 파일을 업로드하세요.
+          </div>
+          <div class="rawdata-empty-msg" id="rawdataSelectMsg">
+            위에서 데이터 유형을 선택하면 원본 목록이 표시됩니다.
+          </div>
+        </section>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    const DATA_TYPES = {
+      products: {
+        label: "상품",
+        hint: "products.csv",
+        sampleFile: "products.csv",
+        requiredCols: ["product_id", "product_name"]
+      },
+      customers: {
+        label: "고객",
+        hint: "customers.csv",
+        sampleFile: "customers.csv",
+        requiredCols: ["customer_id", "customer_name"]
+      },
+      orders: {
+        label: "주문",
+        hint: "sales_orders.csv",
+        sampleFile: "sales_orders.csv",
+        requiredCols: ["order_no", "customer_id"]
+      },
+      orderItems: {
+        label: "주문상세",
+        hint: "sales_order_items.csv",
+        sampleFile: "sales_order_items.csv",
+        requiredCols: ["order_item_id", "order_no"]
+      }
+    };
+
+    const STORAGE_KEY = "erp_data_v1";
+    const INVALID_ORDER_STATUSES = new Set(["취소", "반품"]);
+    const STOCK_RISK_THRESHOLD = 50;
+
+    const COLUMN_LABELS = {
+      product_id: "상품ID",
+      product_name: "상품명",
+      category: "카테고리",
+      brand: "브랜드",
+      unit_cost_krw: "원가",
+      unit_price_krw: "판매가",
+      stock_qty: "재고수량",
+      status: "상태",
+      customer_id: "고객ID",
+      customer_name: "고객명",
+      customer_type: "고객유형",
+      city: "지역",
+      phone: "연락처",
+      email: "이메일",
+      join_date: "가입일",
+      tier: "등급",
+      order_no: "주문번호",
+      order_date: "주문일",
+      channel: "채널",
+      payment_method: "결제수단",
+      total_amount_krw: "주문금액",
+      order_item_id: "주문상세ID",
+      qty: "수량",
+      discount_pct: "할인율",
+      amount_krw: "금액"
+    };
+
+    const MONEY_COLUMNS = new Set([
+      "unit_cost_krw", "unit_price_krw", "total_amount_krw", "amount_krw"
+    ]);
+
+    const PCT_COLUMNS = new Set(["discount_pct"]);
+    const PAGE_INFO = {
+      upload: { title: "데이터 입력", desc: "CSV 파일을 업로드하여 ERP 데이터를 불러옵니다." },
+      dashboard: { title: "대시보드", desc: "핵심 KPI와 실시간 현황을 확인합니다." },
+      report: { title: "분석보고서", desc: "Gemini AI가 ERP 데이터를 분석하여 경영 보고서를 생성합니다." },
+      rawdata: { title: "원본 데이터", desc: "업로드된 CSV 원본 데이터를 조회합니다." }
+    };
+
+    let store = loadStore();
+    let activeDataTab = null;
+    let rawdataPage = 1;
+    const RAWDATA_PAGE_SIZE = 50;
+    const REPORT_CACHE_KEY = "erp_report_cache_v1";
+    let toastTimer = null;
+    let cachedReportData = null;
+    let reportGenerating = false;
+    let dashboardCharts = {
+      monthly: null, category: null, channel: null,
+      payment: null, tier: null, orderStatus: null, brand: null, region: null
+    };
+
+    function num(val) {
+      const n = Number(String(val).replace(/,/g, ""));
+      return Number.isFinite(n) ? n : 0;
+    }
+
+    function formatMoney(val) {
+      return `₩${Math.round(val).toLocaleString("ko-KR")}`;
+    }
+
+    function formatPct(val) {
+      return `${val.toFixed(1)}%`;
+    }
+
+    function formatCount(val) {
+      return `${Math.round(val).toLocaleString("ko-KR")}`;
+    }
+
+    function formatColumnLabel(col, dataType) {
+      if (col === "status" && dataType === "orders") return "주문상태";
+      return COLUMN_LABELS[col] || col;
+    }
+
+    function isNumericColumn(col) {
+      return MONEY_COLUMNS.has(col) || PCT_COLUMNS.has(col);
+    }
+
+    function formatCellDisplay(col, value) {
+      const raw = String(value ?? "").trim();
+      if (raw === "") return "";
+      if (MONEY_COLUMNS.has(col)) return formatMoney(num(raw));
+      if (PCT_COLUMNS.has(col)) return formatPct(num(raw));
+      return raw;
+    }
+
+    function isValidOrderStatus(status) {
+      return !INVALID_ORDER_STATUSES.has(status);
+    }
+
+    function canRenderDashboard() {
+      return !!(store.orders && store.orderItems);
+    }
+
+    function computeDashboardMetrics() {
+      const orders = store.orders.data;
+      const items = store.orderItems.data;
+      const products = store.products?.data || [];
+      const customers = store.customers?.data || [];
+
+      const orderMap = new Map(orders.map((o) => [o.order_no, o]));
+      const productMap = new Map(products.map((p) => [p.product_id, p]));
+      const customerMap = new Map(customers.map((c) => [c.customer_id, c]));
+
+      const validItems = items.filter((item) => {
+        const order = orderMap.get(item.order_no);
+        return order && isValidOrderStatus(order.status);
+      });
+
+      const validSales = validItems.reduce((sum, item) => sum + num(item.amount_krw), 0);
+      const cogs = validItems.reduce((sum, item) => {
+        const product = productMap.get(item.product_id);
+        return sum + num(item.qty) * num(product?.unit_cost_krw);
+      }, 0);
+      const grossProfit = validSales - cogs;
+      const grossMargin = validSales > 0 ? (grossProfit / validSales) * 100 : 0;
+
+      const validOrders = orders.filter((o) => isValidOrderStatus(o.status));
+      const validOrderCount = validOrders.length;
+      const totalOrders = orders.length;
+      const avgOrderValue = validOrderCount > 0 ? validSales / validOrderCount : 0;
+      const salesQty = validItems.reduce((sum, item) => sum + num(item.qty), 0);
+
+      const cancelCount = orders.filter((o) => o.status === "취소").length;
+      const returnCount = orders.filter((o) => o.status === "반품").length;
+      const cancelRate = totalOrders > 0 ? (cancelCount / totalOrders) * 100 : 0;
+      const returnRate = totalOrders > 0 ? (returnCount / totalOrders) * 100 : 0;
+
+      const loyalCustomers = customers.filter((c) => c.tier === "VIP").length;
+      const activeCustomers = new Set(validOrders.map((o) => o.customer_id)).size;
+      const stockRisk = products.filter(
+        (p) => p.status === "판매중" && num(p.stock_qty) <= STOCK_RISK_THRESHOLD
+      ).length;
+      const discontinued = products.filter((p) => p.status === "단종").length;
+      const totalTransaction = orders.reduce((sum, o) => sum + num(o.total_amount_krw), 0);
+
+      const monthlyMap = new Map();
+      validItems.forEach((item) => {
+        const order = orderMap.get(item.order_no);
+        if (!order?.order_date) return;
+        const month = order.order_date.slice(0, 7);
+        monthlyMap.set(month, (monthlyMap.get(month) || 0) + num(item.amount_krw));
+      });
+      const monthlyLabels = [...monthlyMap.keys()].sort();
+      const monthlyValues = monthlyLabels.map((m) => monthlyMap.get(m));
+
+      const categoryMap = new Map();
+      validItems.forEach((item) => {
+        const product = productMap.get(item.product_id);
+        const category = product?.category || "미분류";
+        categoryMap.set(category, (categoryMap.get(category) || 0) + num(item.amount_krw));
+      });
+      const categoryEntries = [...categoryMap.entries()].sort((a, b) => b[1] - a[1]);
+
+      const channelMap = new Map();
+      validOrders.forEach((order) => {
+        const channel = order.channel || "기타";
+        const orderAmount = items
+          .filter((item) => item.order_no === order.order_no)
+          .reduce((sum, item) => sum + num(item.amount_krw), 0);
+        channelMap.set(channel, (channelMap.get(channel) || 0) + orderAmount);
+      });
+      const channelEntries = [...channelMap.entries()].sort((a, b) => b[1] - a[1]);
+
+      const paymentMap = new Map();
+      validOrders.forEach((order) => {
+        const method = order.payment_method || "기타";
+        const orderAmount = items
+          .filter((item) => item.order_no === order.order_no)
+          .reduce((sum, item) => sum + num(item.amount_krw), 0);
+        paymentMap.set(method, (paymentMap.get(method) || 0) + orderAmount);
+      });
+      const paymentEntries = [...paymentMap.entries()].sort((a, b) => b[1] - a[1]);
+
+      const tierMap = new Map();
+      validItems.forEach((item) => {
+        const order = orderMap.get(item.order_no);
+        const customer = customerMap.get(order?.customer_id);
+        const tier = customer?.tier || "미분류";
+        tierMap.set(tier, (tierMap.get(tier) || 0) + num(item.amount_krw));
+      });
+      const tierEntries = [...tierMap.entries()].sort((a, b) => b[1] - a[1]);
+
+      const statusMap = new Map();
+      orders.forEach((order) => {
+        const status = order.status || "기타";
+        statusMap.set(status, (statusMap.get(status) || 0) + 1);
+      });
+      const statusEntries = [...statusMap.entries()].sort((a, b) => b[1] - a[1]);
+
+      const brandMap = new Map();
+      validItems.forEach((item) => {
+        const product = productMap.get(item.product_id);
+        const brand = product?.brand || "미분류";
+        brandMap.set(brand, (brandMap.get(brand) || 0) + num(item.amount_krw));
+      });
+      const brandEntries = [...brandMap.entries()].sort((a, b) => b[1] - a[1]).slice(0, 10);
+
+      const regionMap = new Map();
+      validItems.forEach((item) => {
+        const order = orderMap.get(item.order_no);
+        const customer = customerMap.get(order?.customer_id);
+        const city = customer?.city || "미분류";
+        regionMap.set(city, (regionMap.get(city) || 0) + num(item.amount_krw));
+      });
+      const regionEntries = [...regionMap.entries()].sort((a, b) => b[1] - a[1]).slice(0, 10);
+
+      const productSalesMap = new Map();
+      validItems.forEach((item) => {
+        const id = item.product_id;
+        const product = productMap.get(id);
+        if (!productSalesMap.has(id)) {
+          productSalesMap.set(id, {
+            id,
+            name: product?.product_name || id,
+            category: product?.category || "",
+            sales: 0,
+            qty: 0
+          });
+        }
+        const entry = productSalesMap.get(id);
+        entry.sales += num(item.amount_krw);
+        entry.qty += num(item.qty);
+      });
+      const productTop10 = [...productSalesMap.values()].sort((a, b) => b.sales - a.sales).slice(0, 10);
+
+      const customerSalesMap = new Map();
+      validItems.forEach((item) => {
+        const order = orderMap.get(item.order_no);
+        if (!order) return;
+        const cid = order.customer_id;
+        const customer = customerMap.get(cid);
+        if (!customerSalesMap.has(cid)) {
+          customerSalesMap.set(cid, {
+            id: cid,
+            name: customer?.customer_name || cid,
+            tier: customer?.tier || "",
+            city: customer?.city || "",
+            sales: 0
+          });
+        }
+        customerSalesMap.get(cid).sales += num(item.amount_krw);
+      });
+      const customerTop10 = [...customerSalesMap.values()].sort((a, b) => b.sales - a.sales).slice(0, 10);
+
+      const stockRiskItems = products
+        .filter((p) => p.status === "판매중" && num(p.stock_qty) <= STOCK_RISK_THRESHOLD)
+        .sort((a, b) => num(a.stock_qty) - num(b.stock_qty));
+
+      return {
+        validSales,
+        cogs,
+        grossProfit,
+        grossMargin,
+        avgOrderValue,
+        salesQty,
+        cancelRate,
+        returnRate,
+        loyalCustomers,
+        activeCustomers,
+        stockRisk,
+        discontinued,
+        totalTransaction,
+        monthlyLabels,
+        monthlyValues,
+        categoryEntries,
+        channelEntries,
+        paymentEntries,
+        tierEntries,
+        statusEntries,
+        brandEntries,
+        regionEntries,
+        productTop10,
+        customerTop10,
+        stockRiskItems,
+        hasProducts: products.length > 0,
+        hasCustomers: customers.length > 0,
+        customerTotal: customers.length,
+        productTotal: products.length,
+        validOrderCount,
+        totalOrders,
+        cancelCount,
+        returnCount
+      };
+    }
+
+    const STATUS_LABELS = { normal: "정상", warning: "주의", critical: "심각" };
+
+    function statusBadge(status) {
+      if (!status) return "";
+      return `<span class="status-badge ${status}">${STATUS_LABELS[status]}</span>`;
+    }
+
+    function statusText(status) {
+      if (!status) return "";
+      return `<span class="status-text ${status}">${STATUS_LABELS[status]}</span>`;
+    }
+
+    function statusLabelTopRight(status) {
+      if (!status) return "";
+      return `<div class="kpi-status-label ${status}">${STATUS_LABELS[status]}</div>`;
+    }
+
+    function aggregateStatus(statuses) {
+      if (statuses.includes("critical")) return "critical";
+      if (statuses.includes("warning")) return "warning";
+      if (statuses.length) return "normal";
+      return null;
+    }
+
+    function evaluateKpiStatus(key, m) {
+      switch (key) {
+        case "validSales": {
+          const ratio = m.totalTransaction > 0 ? m.validSales / m.totalTransaction : 0;
+          if (ratio >= 0.88) return "normal";
+          if (ratio >= 0.80) return "warning";
+          return "critical";
+        }
+        case "cogs": {
+          if (!m.hasProducts) return null;
+          const ratio = m.validSales > 0 ? m.cogs / m.validSales : 1;
+          if (ratio <= 0.70) return "normal";
+          if (ratio <= 0.85) return "warning";
+          return "critical";
+        }
+        case "grossProfit": {
+          if (!m.hasProducts) return null;
+          if (m.grossProfit < 0) return "critical";
+          if (m.grossMargin >= 20) return "normal";
+          if (m.grossMargin >= 10) return "warning";
+          return "critical";
+        }
+        case "grossMargin": {
+          if (!m.hasProducts) return null;
+          if (m.grossMargin >= 25) return "normal";
+          if (m.grossMargin >= 15) return "warning";
+          return "critical";
+        }
+        case "avgOrderValue": {
+          if (m.avgOrderValue >= 50000000) return "normal";
+          if (m.avgOrderValue >= 30000000) return "warning";
+          return "critical";
+        }
+        case "salesQty": {
+          const perOrder = m.validOrderCount > 0 ? m.salesQty / m.validOrderCount : 0;
+          if (perOrder >= 30) return "normal";
+          if (perOrder >= 20) return "warning";
+          return "critical";
+        }
+        case "cancelRate": {
+          if (m.cancelRate < 5) return "normal";
+          if (m.cancelRate < 8) return "warning";
+          return "critical";
+        }
+        case "returnRate": {
+          if (m.returnRate < 4) return "normal";
+          if (m.returnRate < 6) return "warning";
+          return "critical";
+        }
+        case "activeCustomers": {
+          if (!m.hasCustomers) return null;
+          const rate = m.customerTotal > 0 ? (m.activeCustomers / m.customerTotal) * 100 : 0;
+          if (rate >= 20) return "normal";
+          if (rate >= 10) return "warning";
+          return "critical";
+        }
+        case "stockRisk": {
+          if (!m.hasProducts) return null;
+          if (m.stockRisk === 0) return "normal";
+          if (m.stockRisk <= 40) return "warning";
+          return "critical";
+        }
+        case "discontinued": {
+          if (!m.hasProducts) return null;
+          const rate = m.productTotal > 0 ? (m.discontinued / m.productTotal) * 100 : 0;
+          if (rate <= 4) return "normal";
+          if (rate <= 7) return "warning";
+          return "critical";
+        }
+        case "totalTransaction": {
+          const badRate = m.totalOrders > 0
+            ? ((m.cancelCount + m.returnCount) / m.totalOrders) * 100
+            : 0;
+          if (badRate < 10) return "normal";
+          if (badRate < 15) return "warning";
+          return "critical";
+        }
+        default:
+          return null;
+      }
+    }
+
+    function evaluateShareStatus(sharePct) {
+      if (sharePct >= 3) return "normal";
+      if (sharePct >= 1.5) return "warning";
+      return "critical";
+    }
+
+    function evaluateStockItemStatus(qty) {
+      const q = num(qty);
+      if (q <= 10) return "critical";
+      if (q <= 25) return "warning";
+      return "normal";
+    }
+
+    function renderKpiCard(m, key, label, value, sub, valueClass = "") {
+      const status = evaluateKpiStatus(key, m);
+      const statusClass = status ? ` status-${status}` : "";
+      return `
+        <div class="kpi-card${statusClass}">
+          ${statusLabelTopRight(status)}
+          <div class="kpi-label">${label}</div>
+          <div class="kpi-value ${valueClass}">${value}</div>
+          <div class="kpi-sub">${sub}</div>
+        </div>
+      `;
+    }
+
+    function pieChartOptions(isMoney = true) {
+      return {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            position: "right",
+            labels: { boxWidth: 12, padding: 14, font: { size: 12 } }
+          },
+          tooltip: {
+            callbacks: {
+              label(ctx) {
+                const val = ctx.parsed;
+                const total = ctx.dataset.data.reduce((a, b) => a + b, 0);
+                const pct = total > 0 ? ((val / total) * 100).toFixed(1) : 0;
+                const formatted = isMoney ? formatMoney(val) : `${formatCount(val)}건`;
+                return ` ${ctx.label}: ${formatted} (${pct}%)`;
+              }
+            }
+          }
+        }
+      };
+    }
+
+    function renderRankList(elId, items, buildHtml) {
+      const el = document.getElementById(elId);
+      if (!items.length) {
+        el.innerHTML = '<li class="rank-empty">데이터 없음</li>';
+        return;
+      }
+      el.innerHTML = items.map((item, i) => buildHtml(item, i)).join("");
+    }
+
+    function destroyDashboardCharts() {
+      Object.keys(dashboardCharts).forEach((key) => {
+        if (dashboardCharts[key]) {
+          dashboardCharts[key].destroy();
+          dashboardCharts[key] = null;
+        }
+      });
+    }
+
+    function renderDashboard() {
+      const placeholder = document.getElementById("dashboardPlaceholder");
+      const content = document.getElementById("dashboardContent");
+
+      if (!canRenderDashboard()) {
+        placeholder.style.display = "";
+        content.style.display = "none";
+        destroyDashboardCharts();
+        return;
+      }
+
+      placeholder.style.display = "none";
+      content.style.display = "";
+
+      const m = computeDashboardMetrics();
+
+      document.getElementById("kpiGrid").innerHTML = [
+        renderKpiCard(m, "validSales", "유효매출", formatMoney(m.validSales), "취소·반품 제외", "money"),
+        renderKpiCard(m, "cogs", "매출원가", m.hasProducts ? formatMoney(m.cogs) : "-", "판매 수량 × 원가", "money"),
+        renderKpiCard(m, "grossProfit", "매출총이익", m.hasProducts ? formatMoney(m.grossProfit) : "-", "유효매출 − 매출원가", "money"),
+        renderKpiCard(m, "grossMargin", "매출총이익률", m.hasProducts ? formatPct(m.grossMargin) : "-", "총이익 / 유효매출", "pct"),
+        renderKpiCard(m, "avgOrderValue", "평균 주문금액", formatMoney(m.avgOrderValue), "유효 주문 기준", "money"),
+        renderKpiCard(m, "salesQty", "판매 수량", `${formatCount(m.salesQty)}개`, "유효 주문 상세 합계", "count"),
+        renderKpiCard(m, "cancelRate", "취소율", formatPct(m.cancelRate), "전체 주문 대비", "warn"),
+        renderKpiCard(m, "returnRate", "반품율", formatPct(m.returnRate), "전체 주문 대비", "warn"),
+        renderKpiCard(m, "activeCustomers", "활성 고객", m.hasCustomers ? `${formatCount(m.activeCustomers)}명 (충성 ${formatCount(m.loyalCustomers)}명)` : "-", "유효 주문 고객 · VIP", "count"),
+        renderKpiCard(m, "stockRisk", "재고 위험", m.hasProducts ? `${formatCount(m.stockRisk)}건` : "-", `재고 ${STOCK_RISK_THRESHOLD}개 이하`, "warn"),
+        renderKpiCard(m, "discontinued", "단종 상품", m.hasProducts ? `${formatCount(m.discontinued)}건` : "-", "단종 상태 상품", "count"),
+        renderKpiCard(m, "totalTransaction", "총 거래액", formatMoney(m.totalTransaction), "전체 주문 합계", "money")
+      ].join("");
+
+      destroyDashboardCharts();
+
+      const chartColors = ["#2563eb", "#7c3aed", "#16a34a", "#d97706", "#dc2626", "#0891b2", "#db2777", "#4f46e5"];
+      const commonOpts = {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label(ctx) {
+                const val = ctx.parsed.y ?? ctx.parsed.x ?? 0;
+                return ` ${formatMoney(val)}`;
+              }
+            }
+          }
+        },
+        scales: {
+          y: {
+            ticks: {
+              callback(v) {
+                if (v >= 1e8) return (v / 1e8).toFixed(0) + "억";
+                if (v >= 1e4) return (v / 1e4).toFixed(0) + "만";
+                return v.toLocaleString("ko-KR");
+              }
+            },
+            grid: { color: "#f1f5f9" }
+          },
+          x: { grid: { display: false } }
+        }
+      };
+
+      dashboardCharts.monthly = new Chart(document.getElementById("chartMonthly"), {
+        type: "line",
+        data: {
+          labels: m.monthlyLabels,
+          datasets: [{
+            label: "매출",
+            data: m.monthlyValues,
+            borderColor: "#2563eb",
+            backgroundColor: "rgba(37, 99, 235, 0.08)",
+            fill: true,
+            tension: 0.3,
+            pointRadius: 4,
+            pointHoverRadius: 6
+          }]
+        },
+        options: commonOpts
+      });
+
+      dashboardCharts.category = new Chart(document.getElementById("chartCategory"), {
+        type: "bar",
+        data: {
+          labels: m.categoryEntries.map(([k]) => k),
+          datasets: [{
+            label: "매출",
+            data: m.categoryEntries.map(([, v]) => v),
+            backgroundColor: m.categoryEntries.map((_, i) => chartColors[i % chartColors.length]),
+            borderRadius: 6
+          }]
+        },
+        options: {
+          ...commonOpts,
+          indexAxis: m.categoryEntries.length > 6 ? "y" : "x",
+          scales: m.categoryEntries.length > 6
+            ? {
+                x: commonOpts.scales.y,
+                y: { grid: { display: false } }
+              }
+            : commonOpts.scales
+        }
+      });
+
+      dashboardCharts.channel = new Chart(document.getElementById("chartChannel"), {
+        type: "bar",
+        data: {
+          labels: m.channelEntries.map(([k]) => k),
+          datasets: [{
+            label: "매출",
+            data: m.channelEntries.map(([, v]) => v),
+            backgroundColor: m.channelEntries.map((_, i) => chartColors[i % chartColors.length]),
+            borderRadius: 6
+          }]
+        },
+        options: commonOpts
+      });
+
+      dashboardCharts.payment = new Chart(document.getElementById("chartPayment"), {
+        type: "pie",
+        data: {
+          labels: m.paymentEntries.map(([k]) => k),
+          datasets: [{
+            data: m.paymentEntries.map(([, v]) => v),
+            backgroundColor: m.paymentEntries.map((_, i) => chartColors[i % chartColors.length]),
+            borderWidth: 2,
+            borderColor: "#fff"
+          }]
+        },
+        options: pieChartOptions(true)
+      });
+
+      dashboardCharts.tier = new Chart(document.getElementById("chartTier"), {
+        type: "bar",
+        data: {
+          labels: m.tierEntries.map(([k]) => k),
+          datasets: [{
+            label: "매출",
+            data: m.tierEntries.map(([, v]) => v),
+            backgroundColor: m.tierEntries.map((_, i) => chartColors[i % chartColors.length]),
+            borderRadius: 6
+          }]
+        },
+        options: commonOpts
+      });
+
+      dashboardCharts.orderStatus = new Chart(document.getElementById("chartOrderStatus"), {
+        type: "pie",
+        data: {
+          labels: m.statusEntries.map(([k]) => k),
+          datasets: [{
+            data: m.statusEntries.map(([, v]) => v),
+            backgroundColor: m.statusEntries.map((_, i) => chartColors[i % chartColors.length]),
+            borderWidth: 2,
+            borderColor: "#fff"
+          }]
+        },
+        options: pieChartOptions(false)
+      });
+
+      dashboardCharts.brand = new Chart(document.getElementById("chartBrand"), {
+        type: "bar",
+        data: {
+          labels: m.brandEntries.map(([k]) => k),
+          datasets: [{
+            label: "매출",
+            data: m.brandEntries.map(([, v]) => v),
+            backgroundColor: m.brandEntries.map((_, i) => chartColors[i % chartColors.length]),
+            borderRadius: 6
+          }]
+        },
+        options: {
+          ...commonOpts,
+          indexAxis: "y",
+          scales: {
+            x: commonOpts.scales.y,
+            y: { grid: { display: false } }
+          }
+        }
+      });
+
+      dashboardCharts.region = new Chart(document.getElementById("chartRegion"), {
+        type: "bar",
+        data: {
+          labels: m.regionEntries.map(([k]) => k),
+          datasets: [{
+            label: "매출",
+            data: m.regionEntries.map(([, v]) => v),
+            backgroundColor: m.regionEntries.map((_, i) => chartColors[i % chartColors.length]),
+            borderRadius: 6
+          }]
+        },
+        options: commonOpts
+      });
+
+      const productStatuses = m.productTop10.map(
+        (item) => evaluateShareStatus(m.validSales > 0 ? (item.sales / m.validSales) * 100 : 0)
+      );
+      document.getElementById("listProductsStatus").innerHTML =
+        statusText(aggregateStatus(productStatuses));
+
+      renderRankList("listProducts", m.productTop10, (item, i) => {
+        const status = productStatuses[i];
+        const share = m.validSales > 0 ? ((item.sales / m.validSales) * 100).toFixed(1) : 0;
+        return `
+        <li class="rank-item">
+          <span class="rank-num${i < 3 ? " top3" : ""}">${i + 1}</span>
+          <div class="rank-info">
+            <div class="rank-name" title="${escapeHtml(item.name)}">${escapeHtml(item.name)}</div>
+            <div class="rank-sub">${escapeHtml(item.category || item.id)} · ${formatCount(item.qty)}개 · 매출비중 ${share}%</div>
+          </div>
+          <div class="rank-item-right">
+            ${statusText(status)}
+            <span class="rank-value">${formatMoney(item.sales)}</span>
+          </div>
+        </li>
+      `;
+      });
+
+      const customerStatuses = m.customerTop10.map(
+        (item) => evaluateShareStatus(m.validSales > 0 ? (item.sales / m.validSales) * 100 : 0)
+      );
+      document.getElementById("listCustomersStatus").innerHTML =
+        statusText(aggregateStatus(customerStatuses));
+
+      renderRankList("listCustomers", m.customerTop10, (item, i) => {
+        const status = customerStatuses[i];
+        const share = m.validSales > 0 ? ((item.sales / m.validSales) * 100).toFixed(1) : 0;
+        return `
+        <li class="rank-item">
+          <span class="rank-num${i < 3 ? " top3" : ""}">${i + 1}</span>
+          <div class="rank-info">
+            <div class="rank-name" title="${escapeHtml(item.name)}">${escapeHtml(item.name)}</div>
+            <div class="rank-sub">${escapeHtml(item.tier || "-")} · ${escapeHtml(item.city || item.id)} · 매출비중 ${share}%</div>
+          </div>
+          <div class="rank-item-right">
+            ${statusText(status)}
+            <span class="rank-value">${formatMoney(item.sales)}</span>
+          </div>
+        </li>
+      `;
+      });
+
+      if (!m.hasProducts) {
+        document.getElementById("listStockRiskStatus").innerHTML = "";
+        document.getElementById("listStockRisk").innerHTML = '<li class="rank-empty">상품 데이터를 업로드하세요</li>';
+      } else if (!m.stockRiskItems.length) {
+        document.getElementById("listStockRiskStatus").innerHTML = statusText("normal");
+        document.getElementById("listStockRisk").innerHTML = '<li class="rank-empty">재고 위험 품목 없음</li>';
+      } else {
+        const stockStatuses = m.stockRiskItems.map((item) => evaluateStockItemStatus(item.stock_qty));
+        document.getElementById("listStockRiskStatus").innerHTML =
+          statusText(aggregateStatus(stockStatuses));
+        renderRankList("listStockRisk", m.stockRiskItems, (item, i) => {
+          const status = stockStatuses[i];
+          return `
+          <li class="rank-item">
+            <span class="rank-num">${i + 1}</span>
+            <div class="rank-info">
+              <div class="rank-name" title="${escapeHtml(item.product_name)}">${escapeHtml(item.product_name)}</div>
+              <div class="rank-sub">${escapeHtml(item.brand || "")} · ${escapeHtml(item.category || "")}</div>
+            </div>
+            <div class="rank-item-right">
+              ${statusText(status)}
+              <span class="rank-value warn">재고 ${formatCount(item.stock_qty)}개</span>
+            </div>
+          </li>
+        `;
+        });
+      }
+    }
+
+    function refreshDashboardIfNeeded() {
+      if (document.getElementById("panel-dashboard").classList.contains("active")) {
+        renderDashboard();
+      }
+    }
+
+    function loadStore() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        return raw ? JSON.parse(raw) : {};
+      } catch {
+        return {};
+      }
+    }
+
+    function saveStore() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(store));
+    }
+
+    function parseCSV(text) {
+      const rows = [];
+      let row = [];
+      let field = "";
+      let inQuotes = false;
+
+      for (let i = 0; i < text.length; i++) {
+        const ch = text[i];
+        const next = text[i + 1];
+
+        if (inQuotes) {
+          if (ch === '"' && next === '"') {
+            field += '"';
+            i++;
+          } else if (ch === '"') {
+            inQuotes = false;
+          } else {
+            field += ch;
+          }
+        } else if (ch === '"') {
+          inQuotes = true;
+        } else if (ch === ",") {
+          row.push(field.trim());
+          field = "";
+        } else if (ch === "\n" || (ch === "\r" && next === "\n")) {
+          row.push(field.trim());
+          if (row.some((c) => c !== "") || rows.length === 0) rows.push(row);
+          row = [];
+          field = "";
+          if (ch === "\r") i++;
+        } else if (ch !== "\r") {
+          field += ch;
+        }
+      }
+
+      if (field || row.length) {
+        row.push(field.trim());
+        if (row.some((c) => c !== "")) rows.push(row);
+      }
+
+      if (rows.length < 1) return { headers: [], data: [] };
+
+      const headers = rows[0];
+      const data = rows.slice(1).map((r) => {
+        const obj = {};
+        headers.forEach((h, idx) => { obj[h] = r[idx] ?? ""; });
+        return obj;
+      });
+
+      return { headers, data };
+    }
+
+    function validateData(type, headers) {
+      const required = DATA_TYPES[type].requiredCols;
+      const missing = required.filter((col) => !headers.includes(col));
+      if (missing.length) {
+        throw new Error(`필수 컬럼 누락: ${missing.join(", ")}`);
+      }
+    }
+
+    function processFile(type, file) {
+      return new Promise((resolve, reject) => {
+        if (!file.name.toLowerCase().endsWith(".csv")) {
+          reject(new Error("CSV 파일만 업로드할 수 있습니다."));
+          return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          try {
+            const text = e.target.result.replace(/^\uFEFF/, "");
+            const { headers, data } = parseCSV(text);
+            validateData(type, headers);
+            store[type] = {
+              fileName: file.name,
+              uploadedAt: new Date().toISOString(),
+              headers,
+              data,
+              rowCount: data.length
+            };
+            saveStore();
+            resolve(data.length);
+          } catch (err) {
+            reject(err);
+          }
+        };
+        reader.onerror = () => reject(new Error("파일을 읽을 수 없습니다."));
+        reader.readAsText(file, "UTF-8");
+      });
+    }
+
+    function showToast(msg, isError = false) {
+      const el = document.getElementById("toast");
+      el.textContent = msg;
+      el.className = "toast show" + (isError ? " error" : "");
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => el.classList.remove("show"), 3000);
+    }
+
+    function renderUploadGrid() {
+      const grid = document.getElementById("uploadGrid");
+      grid.innerHTML = Object.entries(DATA_TYPES).map(([key, cfg]) => {
+        const saved = store[key];
+        const hasData = !!saved;
+        const statusText = hasData
+          ? `${saved.fileName} · ${saved.rowCount.toLocaleString()}행`
+          : "";
+
+        return `
+          <div class="upload-zone${hasData ? " has-data" : ""}" data-type="${key}">
+            <input type="file" accept=".csv,text/csv" data-type="${key}" />
+            <div class="upload-type">${cfg.label}</div>
+            <svg class="upload-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              ${hasData
+                ? '<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>'
+                : '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>'}
+            </svg>
+            <div class="upload-label">${hasData ? "파일 교체" : "파일 업로드"}</div>
+            <div class="upload-hint">드래그 앤 드롭 또는 클릭<br>${cfg.hint}</div>
+            <div class="upload-status">${statusText}</div>
+          </div>
+        `;
+      }).join("");
+
+      grid.querySelectorAll(".upload-zone").forEach((zone) => {
+        const type = zone.dataset.type;
+        const input = zone.querySelector("input");
+
+        zone.addEventListener("dragover", (e) => {
+          e.preventDefault();
+          zone.classList.add("dragover");
+        });
+        zone.addEventListener("dragleave", () => zone.classList.remove("dragover"));
+        zone.addEventListener("drop", (e) => {
+          e.preventDefault();
+          zone.classList.remove("dragover");
+          const file = e.dataTransfer.files[0];
+          if (file) handleUpload(type, file);
+        });
+
+        input.addEventListener("change", () => {
+          const file = input.files[0];
+          if (file) handleUpload(type, file);
+          input.value = "";
+        });
+      });
+    }
+
+    async function handleUpload(type, file) {
+      try {
+        const count = await processFile(type, file);
+        showToast(`${DATA_TYPES[type].label} 데이터 ${count.toLocaleString()}행 업로드 완료`);
+        renderUploadGrid();
+        renderSummary();
+        refreshDashboardIfNeeded();
+        clearCachedReport();
+        if (document.getElementById("panel-report").classList.contains("active")) {
+          initReportPanel();
+        }
+        if (document.getElementById("panel-rawdata").classList.contains("active")) {
+          renderRawData();
+        }
+      } catch (err) {
+        showToast(err.message, true);
+      }
+    }
+
+    function renderSummary() {
+      const bar = document.getElementById("summaryBar");
+      const loaded = Object.keys(DATA_TYPES).filter((k) => store[k]);
+      const total = Object.keys(DATA_TYPES).length;
+
+      bar.innerHTML = `
+        <div class="summary-chip">
+          <span class="summary-dot${loaded.length === total ? " loaded" : ""}"></span>
+          <span>업로드 현황 <strong>${loaded.length}/${total}</strong></span>
+        </div>
+        ${Object.entries(DATA_TYPES).map(([key, cfg]) => {
+          const s = store[key];
+          return `
+            <div class="summary-chip">
+              <span class="summary-dot${s ? " loaded" : ""}"></span>
+              <span>${cfg.label}${s ? ` <strong>${s.rowCount.toLocaleString()}행</strong>` : ""}</span>
+            </div>
+          `;
+        }).join("")}
+      `;
+    }
+
+    function switchPanel(panelId) {
+      document.querySelectorAll(".nav-item").forEach((btn) => {
+        btn.classList.toggle("active", btn.dataset.panel === panelId);
+      });
+      document.querySelectorAll(".panel").forEach((p) => p.classList.remove("active"));
+      document.getElementById(`panel-${panelId}`).classList.add("active");
+
+      const info = PAGE_INFO[panelId];
+      document.getElementById("pageTitle").textContent = info.title;
+      document.getElementById("pageDesc").textContent = info.desc;
+
+      if (panelId === "rawdata") {
+        if (!activeDataTab) {
+          const firstLoaded = Object.keys(DATA_TYPES).find((k) => store[k]);
+          if (firstLoaded) activeDataTab = firstLoaded;
+        }
+        renderRawData();
+      }
+      if (panelId === "dashboard") renderDashboard();
+      if (panelId === "report") initReportPanel();
+    }
+
+    const KPI_REPORT_LABELS = {
+      validSales: "유효매출",
+      cogs: "매출원가",
+      grossProfit: "매출총이익",
+      grossMargin: "매출총이익률",
+      avgOrderValue: "평균 주문금액",
+      salesQty: "판매 수량",
+      cancelRate: "취소율",
+      returnRate: "반품율",
+      activeCustomers: "활성 고객",
+      stockRisk: "재고 위험",
+      discontinued: "단종 상품",
+      totalTransaction: "총 거래액"
+    };
+
+    function buildReportPayload() {
+      const m = computeDashboardMetrics();
+      const orders = store.orders?.data || [];
+      const dates = orders.map((o) => o.order_date).filter(Boolean).sort();
+
+      const kpi = {};
+      const kpiValues = {
+        validSales: formatMoney(m.validSales),
+        cogs: m.hasProducts ? formatMoney(m.cogs) : "-",
+        grossProfit: m.hasProducts ? formatMoney(m.grossProfit) : "-",
+        grossMargin: m.hasProducts ? formatPct(m.grossMargin) : "-",
+        avgOrderValue: formatMoney(m.avgOrderValue),
+        salesQty: `${formatCount(m.salesQty)}개`,
+        cancelRate: formatPct(m.cancelRate),
+        returnRate: formatPct(m.returnRate),
+        activeCustomers: m.hasCustomers
+          ? `${formatCount(m.activeCustomers)}명 (충성 ${formatCount(m.loyalCustomers)}명)`
+          : "-",
+        stockRisk: m.hasProducts ? `${formatCount(m.stockRisk)}건` : "-",
+        discontinued: m.hasProducts ? `${formatCount(m.discontinued)}건` : "-",
+        totalTransaction: formatMoney(m.totalTransaction)
+      };
+
+      for (const [key, display] of Object.entries(kpiValues)) {
+        const status = evaluateKpiStatus(key, m);
+        kpi[KPI_REPORT_LABELS[key]] = {
+          display,
+          status: status ? STATUS_LABELS[status] : null
+        };
+      }
+
+      return {
+        generatedAt: new Date().toISOString().slice(0, 10),
+        period: {
+          from: dates[0] || null,
+          to: dates[dates.length - 1] || null
+        },
+        kpi,
+        monthlySales: m.monthlyLabels.map((month, i) => ({
+          month,
+          sales: m.monthlyValues[i]
+        })),
+        categorySales: m.categoryEntries.slice(0, 8),
+        channelSales: m.channelEntries,
+        paymentSales: m.paymentEntries,
+        tierSales: m.tierEntries,
+        orderStatus: m.statusEntries,
+        topProducts: m.productTop10.map((p) => ({
+          name: p.name,
+          sales: p.sales,
+          qty: p.qty
+        })),
+        topCustomers: m.customerTop10.map((c) => ({
+          name: c.name,
+          tier: c.tier,
+          city: c.city,
+          sales: c.sales
+        })),
+        stockRisk: m.stockRiskItems.slice(0, 15).map((s) => ({
+          name: s.product_name,
+          qty: num(s.stock_qty)
+        })),
+        dataScale: {
+          orders: store.orders?.rowCount || 0,
+          orderItems: store.orderItems?.rowCount || 0,
+          products: store.products?.rowCount || 0,
+          customers: store.customers?.rowCount || 0
+        }
+      };
+    }
+
+    function buildReportDocumentHtml(report, generatedAt) {
+      const dateStr = new Date(generatedAt).toLocaleString("ko-KR");
+      const sectionsHtml = (report.sections || [])
+        .map((sec) => {
+          const paragraphs = String(sec.content || "")
+            .split(/\n\n+/)
+            .filter(Boolean)
+            .map((p) => `<p>${escapeHtml(p.trim())}</p>`)
+            .join("");
+          return `
+            <div class="report-block">
+              <h3>${escapeHtml(sec.heading)}</h3>
+              ${paragraphs}
+            </div>
+          `;
+        })
+        .join("");
+
+      const listHtml = (items, cls = "") => {
+        if (!items?.length) return "";
+        return `<ul class="report-list ${cls}">${items.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>`;
+      };
+
+      return `
+        <div class="report-doc-header">
+          <div class="report-doc-badge">ERP AI 분석 보고서</div>
+          <h1 class="report-doc-title">${escapeHtml(report.title || "ERP 데이터 분석 보고서")}</h1>
+          <div class="report-doc-date">생성일: ${escapeHtml(dateStr)} · Powered by Gemini</div>
+        </div>
+        <div class="report-summary-box">
+          <h3>경영 요약</h3>
+          <p>${escapeHtml(report.executiveSummary || "")}</p>
+        </div>
+        ${sectionsHtml}
+        ${report.keyFindings?.length ? `
+          <div class="report-block">
+            <h3>핵심 발견 사항</h3>
+            ${listHtml(report.keyFindings, "findings")}
+          </div>
+        ` : ""}
+        ${report.recommendations?.length ? `
+          <div class="report-block">
+            <h3>개선 제안</h3>
+            ${listHtml(report.recommendations)}
+          </div>
+        ` : ""}
+        ${report.riskAlerts?.length ? `
+          <div class="report-block">
+            <h3>리스크 및 주의 사항</h3>
+            ${listHtml(report.riskAlerts, "risk")}
+          </div>
+        ` : ""}
+        <div class="report-footer">
+          본 보고서는 업로드된 ERP 데이터를 기반으로 Gemini AI가 자동 생성하였습니다.
+        </div>
+      `;
+    }
+
+    function loadCachedReport() {
+      try {
+        const raw = sessionStorage.getItem(REPORT_CACHE_KEY);
+        return raw ? JSON.parse(raw) : null;
+      } catch {
+        return null;
+      }
+    }
+
+    function saveCachedReport(data) {
+      sessionStorage.setItem(REPORT_CACHE_KEY, JSON.stringify(data));
+      cachedReportData = data;
+    }
+
+    function clearCachedReport() {
+      sessionStorage.removeItem(REPORT_CACHE_KEY);
+      cachedReportData = null;
+    }
+
+    function renderReportDocument(data) {
+      const doc = document.getElementById("reportDocument");
+      doc.innerHTML = buildReportDocumentHtml(data.report, data.generatedAt);
+      document.getElementById("reportMeta").textContent =
+        `마지막 생성: ${new Date(data.generatedAt).toLocaleString("ko-KR")}`;
+      doc.style.display = "";
+    }
+
+    function setReportLoading(loading) {
+      document.getElementById("reportLoading").style.display = loading ? "" : "none";
+      document.getElementById("reportDocument").style.display = loading ? "none" : "";
+      document.getElementById("btnRegenerateReport").disabled = loading;
+      document.getElementById("btnDownloadPdf").disabled = loading || !cachedReportData;
+      document.getElementById("btnDownloadWord").disabled = loading || !cachedReportData;
+    }
+
+    async function parseJsonResponse(res) {
+      const contentType = res.headers.get("content-type") || "";
+      const text = await res.text();
+
+      if (contentType.includes("application/json")) {
+        try {
+          return JSON.parse(text);
+        } catch {
+          throw new Error("서버 응답을 해석할 수 없습니다.");
+        }
+      }
+
+      if (text.trimStart().startsWith("<!DOCTYPE") || text.trimStart().startsWith("<html")) {
+        throw new Error(
+          "API 서버에 연결되지 않았습니다. 프로젝트 루트에서 node dev-server.js 로 실행하거나 Vercel에 배포 후 접속해 주세요."
+        );
+      }
+
+      try {
+        return JSON.parse(text);
+      } catch {
+        throw new Error(text.slice(0, 200) || `서버 오류 (${res.status})`);
+      }
+    }
+
+    async function generateReport(force = false) {
+      if (!canRenderDashboard()) return;
+      if (reportGenerating) return;
+
+      if (!force) {
+        const cached = cachedReportData || loadCachedReport();
+        if (cached) {
+          cachedReportData = cached;
+          renderReportDocument(cached);
+          setReportLoading(false);
+          return;
+        }
+      }
+
+      reportGenerating = true;
+      setReportLoading(true);
+
+      try {
+        const payload = buildReportPayload();
+        const res = await fetch("/api/erp-report", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ payload })
+        });
+
+        const data = await parseJsonResponse(res);
+        if (!res.ok) throw new Error(data.error || "보고서 생성 실패");
+
+        const reportData = {
+          report: data.report,
+          generatedAt: data.generatedAt || new Date().toISOString()
+        };
+        saveCachedReport(reportData);
+        renderReportDocument(reportData);
+        showToast("분석 보고서가 생성되었습니다.");
+      } catch (err) {
+        showToast(err.message, true);
+        if (cachedReportData) {
+          renderReportDocument(cachedReportData);
+        }
+      } finally {
+        reportGenerating = false;
+        setReportLoading(false);
+      }
+    }
+
+    function initReportPanel() {
+      const placeholder = document.getElementById("reportPlaceholder");
+      const content = document.getElementById("reportContent");
+
+      if (!canRenderDashboard()) {
+        placeholder.style.display = "";
+        content.style.display = "none";
+        return;
+      }
+
+      placeholder.style.display = "none";
+      content.style.display = "";
+      generateReport(false);
+    }
+
+    function downloadReportPdf() {
+      if (!cachedReportData) {
+        showToast("먼저 보고서를 생성해 주세요.", true);
+        return;
+      }
+      const element = document.getElementById("reportDocument");
+      const title = cachedReportData.report?.title || "ERP_분석보고서";
+      const filename = `${title.replace(/[^\w가-힣]+/g, "_")}_${new Date().toISOString().slice(0, 10)}.pdf`;
+
+      html2pdf().set({
+        margin: [12, 14, 12, 14],
+        filename,
+        image: { type: "jpeg", quality: 0.98 },
+        html2canvas: { scale: 2, useCORS: true },
+        jsPDF: { unit: "mm", format: "a4", orientation: "portrait" }
+      }).from(element).save().then(() => {
+        showToast("PDF 다운로드가 시작되었습니다.");
+      }).catch(() => {
+        showToast("PDF 생성 중 오류가 발생했습니다.", true);
+      });
+    }
+
+    function downloadReportWord() {
+      if (!cachedReportData) {
+        showToast("먼저 보고서를 생성해 주세요.", true);
+        return;
+      }
+      const html = buildReportDocumentHtml(
+        cachedReportData.report,
+        cachedReportData.generatedAt
+      );
+      const title = cachedReportData.report?.title || "ERP_분석보고서";
+      const filename = `${title.replace(/[^\w가-힣]+/g, "_")}_${new Date().toISOString().slice(0, 10)}.doc`;
+
+      const docHtml = `<!DOCTYPE html>
+<html xmlns:o="urn:schemas-microsoft-com:office:office"
+      xmlns:w="urn:schemas-microsoft-com:office:word"
+      xmlns="http://www.w3.org/TR/REC-html40">
+<head><meta charset="utf-8"><title>${escapeHtml(title)}</title>
+<style>
+  body { font-family: "Malgun Gothic", Arial, sans-serif; font-size: 11pt; line-height: 1.6; color: #1e293b; }
+  h1 { font-size: 22pt; color: #0f172a; border-bottom: 2px solid #2563eb; padding-bottom: 8pt; }
+  h3 { font-size: 13pt; color: #0f172a; margin-top: 18pt; border-bottom: 1px solid #e2e8f0; padding-bottom: 4pt; }
+  p, li { font-size: 11pt; line-height: 1.7; }
+  .report-summary-box { background: #eff6ff; padding: 12pt; margin: 12pt 0; }
+</style>
+</head><body>${html}</body></html>`;
+
+      const blob = new Blob(["\ufeff", docHtml], { type: "application/msword" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(url);
+      showToast("Word 파일 다운로드가 시작되었습니다.");
+    }
+
+    function renderRawData() {
+      const fileGrid = document.getElementById("fileSelectGrid");
+      const tableCard = document.getElementById("rawdataTableCard");
+      const noDataMsg = document.getElementById("rawdataNoDataMsg");
+      const selectMsg = document.getElementById("rawdataSelectMsg");
+
+      fileGrid.innerHTML = Object.entries(DATA_TYPES).map(([key, cfg]) => {
+        const saved = store[key];
+        const isActive = activeDataTab === key;
+        const isLoaded = !!saved;
+        const statusText = isLoaded
+          ? `${saved.fileName} · ${saved.rowCount.toLocaleString()}행`
+          : "미업로드";
+
+        return `
+          <button type="button" class="file-select-card${isActive ? " active" : ""}${isLoaded ? " loaded" : ""}" data-tab="${key}">
+            <div class="file-select-label">${cfg.label}</div>
+            <div class="file-select-hint">${cfg.hint}</div>
+            <div class="file-select-status ${isLoaded ? "loaded" : "empty"}">${statusText}</div>
+          </button>
+        `;
+      }).join("");
+
+      fileGrid.querySelectorAll(".file-select-card").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          activeDataTab = btn.dataset.tab;
+          rawdataPage = 1;
+          renderRawData();
+        });
+      });
+
+      if (!activeDataTab) {
+        tableCard.style.display = "none";
+        noDataMsg.style.display = "none";
+        selectMsg.style.display = "";
+        return;
+      }
+
+      selectMsg.style.display = "none";
+      const current = store[activeDataTab];
+
+      if (!current) {
+        tableCard.style.display = "none";
+        noDataMsg.style.display = "";
+        return;
+      }
+
+      noDataMsg.style.display = "none";
+      tableCard.style.display = "";
+
+      const totalRows = current.rowCount;
+      const totalPages = Math.max(1, Math.ceil(totalRows / RAWDATA_PAGE_SIZE));
+      if (rawdataPage > totalPages) rawdataPage = totalPages;
+
+      const start = (rawdataPage - 1) * RAWDATA_PAGE_SIZE;
+      const pageData = current.data.slice(start, start + RAWDATA_PAGE_SIZE);
+
+      document.getElementById("rawdataFileTitle").textContent =
+        `${DATA_TYPES[activeDataTab].label} 데이터`;
+
+      document.getElementById("tableMeta").textContent =
+        `${current.fileName} · 총 ${totalRows.toLocaleString()}행 · ${rawdataPage}/${totalPages} 페이지`;
+
+      document.getElementById("tableHead").innerHTML =
+        `<tr>${current.headers.map((h) => {
+          const cls = isNumericColumn(h) ? ' class="num"' : "";
+          return `<th${cls}>${escapeHtml(formatColumnLabel(h, activeDataTab))}</th>`;
+        }).join("")}</tr>`;
+
+      document.getElementById("tableBody").innerHTML = pageData.length
+        ? pageData.map((row) =>
+            `<tr>${current.headers.map((h) => {
+              const display = formatCellDisplay(h, row[h]);
+              const cls = isNumericColumn(h) ? ' class="num"' : "";
+              return `<td${cls} title="${escapeHtml(display)}">${escapeHtml(display)}</td>`;
+            }).join("")}</tr>`
+          ).join("")
+        : `<tr><td colspan="${current.headers.length}" style="text-align:center;color:var(--text-muted);">데이터 없음</td></tr>`;
+
+      renderRawdataPagination(totalPages, totalRows, start, pageData.length);
+    }
+
+    function renderRawdataPagination(totalPages, totalRows, start, shown) {
+      const el = document.getElementById("rawdataPagination");
+      if (totalRows === 0) {
+        el.innerHTML = "";
+        return;
+      }
+
+      const end = start + shown;
+      let pageButtons = "";
+
+      const range = 2;
+      let from = Math.max(1, rawdataPage - range);
+      let to = Math.min(totalPages, rawdataPage + range);
+      if (rawdataPage <= range) to = Math.min(totalPages, 1 + range * 2);
+      if (rawdataPage > totalPages - range) from = Math.max(1, totalPages - range * 2);
+
+      for (let p = from; p <= to; p++) {
+        pageButtons += `<button type="button" class="page-btn${p === rawdataPage ? " active" : ""}" data-page="${p}">${p}</button>`;
+      }
+
+      el.innerHTML = `
+        <span class="pagination-info">${(start + 1).toLocaleString()}–${end.toLocaleString()} / ${totalRows.toLocaleString()}행</span>
+        <button type="button" class="page-btn" data-page="prev" ${rawdataPage <= 1 ? "disabled" : ""}>이전</button>
+        ${pageButtons}
+        <button type="button" class="page-btn" data-page="next" ${rawdataPage >= totalPages ? "disabled" : ""}>다음</button>
+      `;
+
+      el.querySelectorAll(".page-btn[data-page]").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          const target = btn.dataset.page;
+          if (target === "prev") rawdataPage = Math.max(1, rawdataPage - 1);
+          else if (target === "next") rawdataPage = Math.min(totalPages, rawdataPage + 1);
+          else rawdataPage = Number(target);
+          renderRawData();
+        });
+      });
+    }
+
+    function escapeHtml(str) {
+      return String(str)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;");
+    }
+
+    async function loadSampleData() {
+      const types = Object.keys(DATA_TYPES);
+      let loaded = 0;
+
+      for (const type of types) {
+        if (store[type]) continue;
+        try {
+          const res = await fetch(DATA_TYPES[type].sampleFile);
+          if (!res.ok) throw new Error("샘플 파일을 찾을 수 없습니다.");
+          const text = await res.text();
+          const { headers, data } = parseCSV(text);
+          validateData(type, headers);
+          store[type] = {
+            fileName: DATA_TYPES[type].sampleFile,
+            uploadedAt: new Date().toISOString(),
+            headers,
+            data,
+            rowCount: data.length
+          };
+          loaded++;
+        } catch (err) {
+          showToast(`${DATA_TYPES[type].label} 샘플 로드 실패: ${err.message}`, true);
+        }
+      }
+
+      if (loaded > 0) {
+        saveStore();
+        showToast(`샘플 데이터 ${loaded}개 파일 불러오기 완료`);
+        renderUploadGrid();
+        renderSummary();
+        refreshDashboardIfNeeded();
+        clearCachedReport();
+      } else {
+        showToast("이미 모든 샘플 데이터가 로드되어 있습니다.");
+      }
+    }
+
+    function clearAllData() {
+      if (!Object.keys(store).length) {
+        showToast("삭제할 데이터가 없습니다.");
+        return;
+      }
+      if (!confirm("업로드된 모든 데이터를 삭제하시겠습니까?")) return;
+      store = {};
+      saveStore();
+      activeDataTab = null;
+      rawdataPage = 1;
+      showToast("전체 데이터가 삭제되었습니다.");
+      renderUploadGrid();
+      renderSummary();
+      renderRawData();
+      refreshDashboardIfNeeded();
+      clearCachedReport();
+    }
+
+    document.getElementById("btnRegenerateReport").addEventListener("click", () => generateReport(true));
+    document.getElementById("btnDownloadPdf").addEventListener("click", downloadReportPdf);
+    document.getElementById("btnDownloadWord").addEventListener("click", downloadReportWord);
+
+    document.querySelectorAll(".nav-item").forEach((btn) => {
+      btn.addEventListener("click", () => switchPanel(btn.dataset.panel));
+    });
+
+    document.getElementById("btnLoadSample").addEventListener("click", loadSampleData);
+    document.getElementById("btnClearAll").addEventListener("click", clearAllData);
+
+    renderUploadGrid();
+    renderSummary();
+    renderRawData();
+  </script>
+</body>
+</html>
