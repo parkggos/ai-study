@@ -176,6 +176,61 @@
     }
 
     /* Upload grid */
+    .bulk-drop-zone {
+      border: 2px dashed var(--border);
+      border-radius: var(--radius);
+      padding: 32px 24px;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color 0.2s, background 0.2s;
+      position: relative;
+      background: var(--bg);
+      margin-bottom: 20px;
+    }
+
+    .bulk-drop-zone:hover,
+    .bulk-drop-zone.dragover {
+      border-color: var(--primary);
+      background: var(--primary-light);
+    }
+
+    .bulk-drop-zone input[type="file"] {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      cursor: pointer;
+    }
+
+    .bulk-drop-title {
+      font-size: 16px;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+
+    .bulk-drop-hint {
+      font-size: 13px;
+      color: var(--text-muted);
+      line-height: 1.6;
+    }
+
+    .bulk-drop-files {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 8px;
+      margin-top: 14px;
+    }
+
+    .bulk-drop-tag {
+      font-size: 11px;
+      font-weight: 500;
+      padding: 4px 10px;
+      border-radius: 999px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+    }
+
     .upload-grid {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
@@ -592,7 +647,7 @@
     /* Dashboard */
     .kpi-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      grid-template-columns: repeat(4, 1fr);
       gap: 14px;
       margin-bottom: 20px;
     }
@@ -958,6 +1013,7 @@
     }
 
     @media (max-width: 900px) {
+      .kpi-grid { grid-template-columns: repeat(2, 1fr); }
       .chart-grid { grid-template-columns: 1fr; }
       .chart-grid .chart-card.full { grid-column: auto; }
       .list-grid { grid-template-columns: 1fr; }
@@ -981,6 +1037,7 @@
       }
 
       .nav-item { flex: 1; min-width: 120px; justify-content: center; font-size: 13px; }
+      .kpi-grid { grid-template-columns: 1fr; }
       .main { margin-left: 0; }
       .content { padding: 20px 16px 32px; }
       .topbar { padding: 14px 16px; }
@@ -1029,8 +1086,22 @@
           <div class="card">
             <div class="card-title">파일 업로드</div>
             <p style="font-size:13px;color:var(--text-muted);margin-bottom:20px;">
-              각 데이터 유형별 CSV 파일을 드래그 앤 드롭하거나 클릭하여 선택하세요.
+              4개 CSV 파일을 한 번에 드래그 앤 드롭하거나, 유형별로 개별 업로드할 수 있습니다.
             </p>
+            <div class="bulk-drop-zone" id="bulkDropZone">
+              <input type="file" id="bulkFileInput" accept=".csv,text/csv" multiple />
+              <svg class="upload-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="margin-bottom:12px;">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
+              </svg>
+              <div class="bulk-drop-title">4개 파일 일괄 업로드</div>
+              <div class="bulk-drop-hint">CSV 4개를 동시에 드래그 앤 드롭하거나 클릭하여 선택하세요.<br>파일명·컬럼 구조로 자동 분류됩니다.</div>
+              <div class="bulk-drop-files">
+                <span class="bulk-drop-tag">products.csv</span>
+                <span class="bulk-drop-tag">customers.csv</span>
+                <span class="bulk-drop-tag">sales_orders.csv</span>
+                <span class="bulk-drop-tag">sales_order_items.csv</span>
+              </div>
+            </div>
             <div class="upload-grid" id="uploadGrid"></div>
           </div>
 
@@ -2010,35 +2081,74 @@
       }
     }
 
-    function processFile(type, file) {
+    function readFileAsText(file) {
       return new Promise((resolve, reject) => {
-        if (!file.name.toLowerCase().endsWith(".csv")) {
-          reject(new Error("CSV 파일만 업로드할 수 있습니다."));
-          return;
-        }
-
         const reader = new FileReader();
-        reader.onload = (e) => {
-          try {
-            const text = e.target.result.replace(/^\uFEFF/, "");
-            const { headers, data } = parseCSV(text);
-            validateData(type, headers);
-            store[type] = {
-              fileName: file.name,
-              uploadedAt: new Date().toISOString(),
-              headers,
-              data,
-              rowCount: data.length
-            };
-            saveStore();
-            resolve(data.length);
-          } catch (err) {
-            reject(err);
-          }
-        };
+        reader.onload = (e) => resolve(e.target.result.replace(/^\uFEFF/, ""));
         reader.onerror = () => reject(new Error("파일을 읽을 수 없습니다."));
         reader.readAsText(file, "UTF-8");
       });
+    }
+
+    function detectFileType(fileName, headers) {
+      const name = fileName.toLowerCase();
+      const h = new Set(headers);
+
+      for (const [type, cfg] of Object.entries(DATA_TYPES)) {
+        if (name === cfg.sampleFile.toLowerCase()) return type;
+      }
+
+      if (name.includes("order_item") || name.includes("order-item") || name.includes("orderitems")) {
+        return "orderItems";
+      }
+      if ((name.includes("sales_order") || name.includes("sales-order")) && !name.includes("item")) {
+        return "orders";
+      }
+      if (name.includes("product")) return "products";
+      if (name.includes("customer")) return "customers";
+
+      if (h.has("order_item_id")) return "orderItems";
+      if (h.has("total_amount_krw") && h.has("order_no")) return "orders";
+      if (h.has("unit_cost_krw") && h.has("product_name")) return "products";
+      if (h.has("tier") && h.has("customer_name")) return "customers";
+      if (h.has("amount_krw") && h.has("qty") && h.has("order_no")) return "orderItems";
+      if (h.has("order_no") && h.has("customer_id") && h.has("order_date")) return "orders";
+      if (h.has("product_id") && h.has("product_name")) return "products";
+      if (h.has("customer_id") && h.has("customer_name")) return "customers";
+
+      return null;
+    }
+
+    function saveCsvData(type, file, headers, data) {
+      store[type] = {
+        fileName: file.name,
+        uploadedAt: new Date().toISOString(),
+        headers,
+        data,
+        rowCount: data.length
+      };
+    }
+
+    async function importCsvFile(file, forcedType = null) {
+      if (!file.name.toLowerCase().endsWith(".csv")) {
+        throw new Error("CSV 파일만 업로드할 수 있습니다.");
+      }
+
+      const text = await readFileAsText(file);
+      const { headers, data } = parseCSV(text);
+      const type = forcedType || detectFileType(file.name, headers);
+
+      if (!type) {
+        throw new Error("파일 유형을 자동 인식할 수 없습니다.");
+      }
+
+      validateData(type, headers);
+      saveCsvData(type, file, headers, data);
+      return { type, count: data.length };
+    }
+
+    function processFile(type, file) {
+      return importCsvFile(file, type).then(({ count }) => count);
     }
 
     function showToast(msg, isError = false) {
@@ -2086,8 +2196,15 @@
         zone.addEventListener("drop", (e) => {
           e.preventDefault();
           zone.classList.remove("dragover");
-          const file = e.dataTransfer.files[0];
-          if (file) handleUpload(type, file);
+          const files = [...e.dataTransfer.files].filter((f) =>
+            f.name.toLowerCase().endsWith(".csv")
+          );
+          if (!files.length) return;
+          if (files.length === 1) {
+            handleUpload(type, files[0]);
+          } else {
+            handleBulkUpload(files);
+          }
         });
 
         input.addEventListener("change", () => {
@@ -2101,20 +2218,80 @@
     async function handleUpload(type, file) {
       try {
         const count = await processFile(type, file);
+        saveStore();
         showToast(`${DATA_TYPES[type].label} 데이터 ${count.toLocaleString()}행 업로드 완료`);
-        renderUploadGrid();
-        renderSummary();
-        refreshDashboardIfNeeded();
-        clearCachedReport();
-        if (document.getElementById("panel-report").classList.contains("active")) {
-          initReportPanel();
-        }
-        if (document.getElementById("panel-rawdata").classList.contains("active")) {
-          renderRawData();
-        }
+        afterDataUpload();
       } catch (err) {
         showToast(err.message, true);
       }
+    }
+
+    async function handleBulkUpload(fileList) {
+      const files = [...fileList].filter((f) => f.name.toLowerCase().endsWith(".csv"));
+      if (!files.length) {
+        showToast("CSV 파일을 선택해 주세요.", true);
+        return;
+      }
+
+      const succeeded = [];
+      const failed = [];
+
+      for (const file of files) {
+        try {
+          const { type, count } = await importCsvFile(file);
+          succeeded.push(`${DATA_TYPES[type].label} ${count.toLocaleString()}행`);
+        } catch (err) {
+          failed.push(`${file.name}: ${err.message}`);
+        }
+      }
+
+      if (succeeded.length) {
+        saveStore();
+        afterDataUpload();
+        showToast(`${succeeded.length}개 파일 업로드 완료 (${succeeded.join(", ")})`);
+      }
+
+      if (failed.length) {
+        showToast(failed.slice(0, 2).join(" / ") + (failed.length > 2 ? ` 외 ${failed.length - 2}건` : ""), true);
+      }
+    }
+
+    function afterDataUpload() {
+      renderUploadGrid();
+      renderSummary();
+      clearCachedReport();
+      refreshDashboardIfNeeded();
+      if (document.getElementById("panel-report").classList.contains("active")) {
+        initReportPanel();
+      }
+      if (document.getElementById("panel-rawdata").classList.contains("active")) {
+        renderRawData();
+      }
+    }
+
+    function initBulkUpload() {
+      const zone = document.getElementById("bulkDropZone");
+      const input = document.getElementById("bulkFileInput");
+
+      zone.addEventListener("dragover", (e) => {
+        e.preventDefault();
+        zone.classList.add("dragover");
+      });
+      zone.addEventListener("dragleave", () => zone.classList.remove("dragover"));
+      zone.addEventListener("drop", (e) => {
+        e.preventDefault();
+        zone.classList.remove("dragover");
+        if (e.dataTransfer.files.length) {
+          handleBulkUpload(e.dataTransfer.files);
+        }
+      });
+
+      input.addEventListener("change", () => {
+        if (input.files.length) {
+          handleBulkUpload(input.files);
+        }
+        input.value = "";
+      });
     }
 
     function renderSummary() {
@@ -2678,6 +2855,7 @@
     document.getElementById("btnLoadSample").addEventListener("click", loadSampleData);
     document.getElementById("btnClearAll").addEventListener("click", clearAllData);
 
+    initBulkUpload();
     renderUploadGrid();
     renderSummary();
     renderRawData();
