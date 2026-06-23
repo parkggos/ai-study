@@ -870,9 +870,24 @@
     }
 
     .stock-risk-table th.num,
-    .stock-risk-table td.num {
+    .stock-risk-table td.num,
+    .rank-table th.num,
+    .rank-table td.num {
       text-align: right;
       font-variant-numeric: tabular-nums;
+    }
+
+    .rank-table th.rank-col,
+    .rank-table td.rank-col {
+      width: 40px;
+      text-align: center;
+      font-weight: 600;
+      color: var(--text-muted);
+    }
+
+    .rank-table tr.top3 td.rank-col {
+      color: var(--primary);
+      font-weight: 700;
     }
 
     .stock-risk-table td.status-cell {
@@ -1168,18 +1183,12 @@
             </div>
             <div class="list-grid">
               <div class="chart-card">
-                <div class="card-title-row">
-                  <div class="card-title">상품 순위 (매출 TOP 10)</div>
-                  <span id="listProductsStatus"></span>
-                </div>
-                <ol class="rank-list" id="listProducts"></ol>
+                <div class="card-title">상품 순위 (매출 TOP 10)</div>
+                <div id="listProducts"></div>
               </div>
               <div class="chart-card">
-                <div class="card-title-row">
-                  <div class="card-title">상위 고객 (매출 TOP 10)</div>
-                  <span id="listCustomersStatus"></span>
-                </div>
-                <ol class="rank-list" id="listCustomers"></ol>
+                <div class="card-title">상위 고객 (매출 TOP 10)</div>
+                <div id="listCustomers"></div>
               </div>
               <div class="chart-card full">
                 <div class="card-title-row">
@@ -1514,14 +1523,22 @@
             name: product?.product_name || id,
             category: product?.category || "",
             sales: 0,
-            qty: 0
+            qty: 0,
+            cogs: 0
           });
         }
         const entry = productSalesMap.get(id);
         entry.sales += num(item.amount_krw);
         entry.qty += num(item.qty);
+        entry.cogs += num(item.qty) * num(product?.unit_cost_krw);
       });
-      const productTop10 = [...productSalesMap.values()].sort((a, b) => b.sales - a.sales).slice(0, 10);
+      const productTop10 = [...productSalesMap.values()]
+        .map((p) => ({
+          ...p,
+          marginPct: p.sales > 0 ? ((p.sales - p.cogs) / p.sales) * 100 : null
+        }))
+        .sort((a, b) => b.sales - a.sales)
+        .slice(0, 10);
 
       const customerSalesMap = new Map();
       validItems.forEach((item) => {
@@ -1535,12 +1552,18 @@
             name: customer?.customer_name || cid,
             tier: customer?.tier || "",
             city: customer?.city || "",
-            sales: 0
+            sales: 0,
+            orderNos: new Set()
           });
         }
-        customerSalesMap.get(cid).sales += num(item.amount_krw);
+        const entry = customerSalesMap.get(cid);
+        entry.sales += num(item.amount_krw);
+        entry.orderNos.add(item.order_no);
       });
-      const customerTop10 = [...customerSalesMap.values()].sort((a, b) => b.sales - a.sales).slice(0, 10);
+      const customerTop10 = [...customerSalesMap.values()]
+        .map((c) => ({ ...c, orderCount: c.orderNos.size }))
+        .sort((a, b) => b.sales - a.sales)
+        .slice(0, 10);
 
       const stockRiskItems = (() => {
         const productMonthlyQty = new Map();
@@ -1727,12 +1750,6 @@
       }
     }
 
-    function evaluateShareStatus(sharePct) {
-      if (sharePct >= 3) return "normal";
-      if (sharePct >= 1.5) return "warning";
-      return "critical";
-    }
-
     function evaluateStockItemStatus(qty) {
       const q = num(qty);
       if (q <= 10) return "critical";
@@ -1780,6 +1797,78 @@
       `;
     }
 
+    function renderProductRankTable(items) {
+      const el = document.getElementById("listProducts");
+      if (!items.length) {
+        el.innerHTML = '<div class="rank-empty">데이터 없음</div>';
+        return;
+      }
+      el.innerHTML = `
+        <div class="table-wrap">
+          <table class="rank-table">
+            <thead>
+              <tr>
+                <th class="rank-col">#</th>
+                <th>상품</th>
+                <th>카테고리</th>
+                <th class="num">매출</th>
+                <th class="num">수량</th>
+                <th class="num">이익률</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${items.map((item, i) => `
+                <tr class="${i < 3 ? "top3" : ""}">
+                  <td class="rank-col">${i + 1}</td>
+                  <td title="${escapeHtml(item.name)}">${escapeHtml(item.name)}</td>
+                  <td>${escapeHtml(item.category || "-")}</td>
+                  <td class="num">${formatMoney(item.sales)}</td>
+                  <td class="num">${formatCount(item.qty)}</td>
+                  <td class="num">${item.marginPct !== null ? formatPct(item.marginPct) : "-"}</td>
+                </tr>
+              `).join("")}
+            </tbody>
+          </table>
+        </div>
+      `;
+    }
+
+    function renderCustomerRankTable(items) {
+      const el = document.getElementById("listCustomers");
+      if (!items.length) {
+        el.innerHTML = '<div class="rank-empty">데이터 없음</div>';
+        return;
+      }
+      el.innerHTML = `
+        <div class="table-wrap">
+          <table class="rank-table">
+            <thead>
+              <tr>
+                <th class="rank-col">#</th>
+                <th>고객</th>
+                <th>등급</th>
+                <th>지역</th>
+                <th class="num">매출</th>
+                <th class="num">주문수</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${items.map((item, i) => `
+                <tr class="${i < 3 ? "top3" : ""}">
+                  <td class="rank-col">${i + 1}</td>
+                  <td title="${escapeHtml(item.name)}">${escapeHtml(item.name)}</td>
+                  <td>${escapeHtml(item.tier || "-")}</td>
+                  <td>${escapeHtml(item.city || "-")}</td>
+                  <td class="num">${formatMoney(item.sales)}</td>
+                  <td class="num">${formatCount(item.orderCount)}</td>
+                </tr>
+              `).join("")}
+            </tbody>
+          </table>
+        </div>
+      `;
+    }
+
     function renderKpiCard(m, key, label, value, sub, valueClass = "") {
       const status = evaluateKpiStatus(key, m);
       const statusClass = status ? ` status-${status}` : "";
@@ -1815,15 +1904,6 @@
           }
         }
       };
-    }
-
-    function renderRankList(elId, items, buildHtml) {
-      const el = document.getElementById(elId);
-      if (!items.length) {
-        el.innerHTML = '<li class="rank-empty">데이터 없음</li>';
-        return;
-      }
-      el.innerHTML = items.map((item, i) => buildHtml(item, i)).join("");
     }
 
     function destroyDashboardCharts() {
@@ -2030,53 +2110,8 @@
         options: commonOpts
       });
 
-      const productStatuses = m.productTop10.map(
-        (item) => evaluateShareStatus(m.validSales > 0 ? (item.sales / m.validSales) * 100 : 0)
-      );
-      document.getElementById("listProductsStatus").innerHTML =
-        statusText(aggregateStatus(productStatuses));
-
-      renderRankList("listProducts", m.productTop10, (item, i) => {
-        const status = productStatuses[i];
-        const share = m.validSales > 0 ? ((item.sales / m.validSales) * 100).toFixed(1) : 0;
-        return `
-        <li class="rank-item">
-          <span class="rank-num${i < 3 ? " top3" : ""}">${i + 1}</span>
-          <div class="rank-info">
-            <div class="rank-name" title="${escapeHtml(item.name)}">${escapeHtml(item.name)}</div>
-            <div class="rank-sub">${escapeHtml(item.category || item.id)} · ${formatCount(item.qty)}개 · 매출비중 ${share}%</div>
-          </div>
-          <div class="rank-item-right">
-            ${statusText(status)}
-            <span class="rank-value">${formatMoney(item.sales)}</span>
-          </div>
-        </li>
-      `;
-      });
-
-      const customerStatuses = m.customerTop10.map(
-        (item) => evaluateShareStatus(m.validSales > 0 ? (item.sales / m.validSales) * 100 : 0)
-      );
-      document.getElementById("listCustomersStatus").innerHTML =
-        statusText(aggregateStatus(customerStatuses));
-
-      renderRankList("listCustomers", m.customerTop10, (item, i) => {
-        const status = customerStatuses[i];
-        const share = m.validSales > 0 ? ((item.sales / m.validSales) * 100).toFixed(1) : 0;
-        return `
-        <li class="rank-item">
-          <span class="rank-num${i < 3 ? " top3" : ""}">${i + 1}</span>
-          <div class="rank-info">
-            <div class="rank-name" title="${escapeHtml(item.name)}">${escapeHtml(item.name)}</div>
-            <div class="rank-sub">${escapeHtml(item.tier || "-")} · ${escapeHtml(item.city || item.id)} · 매출비중 ${share}%</div>
-          </div>
-          <div class="rank-item-right">
-            ${statusText(status)}
-            <span class="rank-value">${formatMoney(item.sales)}</span>
-          </div>
-        </li>
-      `;
-      });
+      renderProductRankTable(m.productTop10);
+      renderCustomerRankTable(m.customerTop10);
 
       if (!m.hasProducts) {
         document.getElementById("listStockRiskStatus").innerHTML = "";
