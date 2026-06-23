@@ -2177,13 +2177,14 @@
 
     const chart3dPlugin = {
       id: "chart3d",
-      beforeDatasetsDraw(chart, args) {
-        if (!chart.options.plugins?.chart3d?.enabled) return;
+      defaults: { enabled: false },
+      beforeDatasetDraw(chart, args, options) {
+        if (!options?.enabled) return;
         if (chart.config.type === "pie") drawPie3DDepth(chart, args.index);
         if (chart.config.type === "line") drawLine3DDepth(chart, args.index);
       },
-      afterDatasetsDraw(chart, args) {
-        if (!chart.options.plugins?.chart3d?.enabled) return;
+      afterDatasetDraw(chart, args, options) {
+        if (!options?.enabled) return;
         if (chart.config.type === "bar") drawBar3DFaces(chart, args.index);
       }
     };
@@ -2229,11 +2230,14 @@
     Chart.register(chart3dPlugin);
     Chart.register(pieSliceLabelsPlugin);
 
+    let chart3dEnabled = localStorage.getItem(CHART_3D_KEY) === "1";
+
     function isChart3dEnabled() {
-      return localStorage.getItem(CHART_3D_KEY) === "1";
+      return chart3dEnabled;
     }
 
     function setChart3dEnabled(enabled) {
+      chart3dEnabled = enabled;
       localStorage.setItem(CHART_3D_KEY, enabled ? "1" : "0");
     }
 
@@ -3508,7 +3512,9 @@
     document.getElementById("btnClearAll").addEventListener("click", clearAllData);
     document.getElementById("toggleChart3d").addEventListener("change", (e) => {
       setChart3dEnabled(e.target.checked);
-      refreshDashboardIfNeeded();
+      if (document.getElementById("panel-dashboard").classList.contains("active")) {
+        renderDashboard();
+      }
     });
 
     initBulkUpload();
