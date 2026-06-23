@@ -147,6 +147,22 @@
       z-index: 50;
     }
 
+    .topbar-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    .topbar-main {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .topbar-actions {
+      flex-shrink: 0;
+    }
+
     .topbar h2 {
       font-size: 20px;
       font-weight: 700;
@@ -972,15 +988,6 @@
     }
 
     /* Report */
-    .dashboard-toolbar {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-      margin-bottom: 16px;
-      align-items: center;
-      justify-content: flex-end;
-    }
-
     .chart-3d-toggle {
       display: inline-flex;
       align-items: center;
@@ -1220,8 +1227,18 @@
 
     <div class="main">
       <header class="topbar">
-        <h2 id="pageTitle">데이터 입력</h2>
-        <p id="pageDesc">CSV 파일을 업로드하여 ERP 데이터를 불러옵니다.</p>
+        <div class="topbar-inner">
+          <div class="topbar-main">
+            <h2 id="pageTitle">데이터 입력</h2>
+            <p id="pageDesc">CSV 파일을 업로드하여 ERP 데이터를 불러옵니다.</p>
+          </div>
+          <div class="topbar-actions" id="topbarDashboardActions" hidden>
+            <label class="chart-3d-toggle" for="toggleChart3d">
+              <input type="checkbox" id="toggleChart3d" />
+              <span>3D 그래프</span>
+            </label>
+          </div>
+        </div>
       </header>
 
       <div class="content">
@@ -1265,12 +1282,6 @@
             <p>주문·주문상세 데이터를 업로드하면 대시보드 KPI와 차트가 표시됩니다.</p>
           </div>
           <div id="dashboardContent" style="display:none;">
-            <div class="dashboard-toolbar">
-              <label class="chart-3d-toggle" for="toggleChart3d">
-                <input type="checkbox" id="toggleChart3d" />
-                <span>3D 그래프</span>
-              </label>
-            </div>
             <div class="kpi-grid" id="kpiGrid"></div>
             <div class="chart-grid">
               <div class="chart-card full">
@@ -2253,6 +2264,12 @@
       if (toggle) toggle.checked = isChart3dEnabled();
     }
 
+    function updateTopbarDashboardActions() {
+      const actions = document.getElementById("topbarDashboardActions");
+      const isDashboard = document.getElementById("panel-dashboard").classList.contains("active");
+      if (actions) actions.hidden = !(isDashboard && canRenderDashboard());
+    }
+
     function pieChartOptions(isMoney = true) {
       return {
         responsive: true,
@@ -2297,12 +2314,14 @@
         placeholder.style.display = "";
         content.style.display = "none";
         destroyDashboardCharts();
+        updateTopbarDashboardActions();
         return;
       }
 
       placeholder.style.display = "none";
       content.style.display = "";
       syncChart3dToggle();
+      updateTopbarDashboardActions();
 
       const m = computeDashboardMetrics();
 
@@ -2981,6 +3000,7 @@
         renderRawData();
       }
       if (panelId === "dashboard") renderDashboard();
+      else updateTopbarDashboardActions();
       if (panelId === "report") initReportPanel();
       updateStickyChromeTop();
     }
@@ -3517,6 +3537,7 @@
     renderSummary();
     renderRawData();
     syncChart3dToggle();
+    updateTopbarDashboardActions();
     updateStickyChromeTop();
     window.addEventListener("resize", updateStickyChromeTop);
     window.addEventListener("scroll", scheduleDashboardListStickyHeaders, { passive: true });
