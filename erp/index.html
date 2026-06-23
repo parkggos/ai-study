@@ -905,12 +905,16 @@
       box-shadow: inset 0 -1px 0 var(--border);
     }
 
-    .dashboard-list-table thead th:first-child {
+    .dashboard-list-table:not(.thead-pinned) thead th:first-child {
       border-top-left-radius: calc(var(--radius) - 1px);
     }
 
-    .dashboard-list-table thead th:last-child {
+    .dashboard-list-table:not(.thead-pinned) thead th:last-child {
       border-top-right-radius: calc(var(--radius) - 1px);
+    }
+
+    .dashboard-list-table.thead-pinned thead th {
+      box-shadow: inset 0 -1px 0 var(--border), 0 -12px 0 0 var(--bg);
     }
 
     .dashboard-list-table tbody tr:last-child td:first-child {
@@ -2799,29 +2803,33 @@
       `;
     }
 
+    function getStickyChromeTop() {
+      const topbar = document.querySelector(".topbar");
+      return Math.ceil(topbar?.getBoundingClientRect().bottom ?? 128);
+    }
+
     function updateStickyChromeTop() {
       const nav = document.querySelector(".sidebar");
-      const topbar = document.querySelector(".topbar");
       const navH = Math.ceil(nav?.getBoundingClientRect().height ?? nav?.offsetHeight ?? 60);
-      const topbarH = Math.ceil(topbar?.offsetHeight ?? 72);
+      const chromeTop = getStickyChromeTop();
       document.documentElement.style.setProperty("--nav-height", `${navH}px`);
-      document.documentElement.style.setProperty("--sticky-chrome-top", `${navH + topbarH}px`);
+      document.documentElement.style.setProperty("--sticky-chrome-top", `${chromeTop}px`);
       scheduleDashboardListStickyHeaders();
     }
 
     let stickyHeaderTicking = false;
 
     function updateDashboardListStickyHeaders() {
-      const chromeTop = parseFloat(
-        getComputedStyle(document.documentElement).getPropertyValue("--sticky-chrome-top")
-      ) || 128;
-      const stickyTop = chromeTop;
+      const stickyTop = getStickyChromeTop();
+      document.documentElement.style.setProperty("--sticky-chrome-top", `${stickyTop}px`);
 
       document.querySelectorAll(".dashboard-list-table").forEach((wrap) => {
         const thead = wrap.querySelector("thead");
         const rows = [...wrap.querySelectorAll("tbody tr")];
+        const firstTh = thead?.querySelector("th");
+
         if (!thead || !rows.length) {
-          wrap.classList.remove("thead-follow");
+          wrap.classList.remove("thead-follow", "thead-pinned");
           wrap.style.removeProperty("--thead-follow-y");
           delete wrap.dataset.theadReleased;
           return;
@@ -2831,7 +2839,7 @@
         const headerBottom = stickyTop + headerHeight;
 
         if (rows.length === 1) {
-          wrap.classList.remove("thead-follow");
+          wrap.classList.remove("thead-follow", "thead-pinned");
           wrap.style.removeProperty("--thead-follow-y");
           delete wrap.dataset.theadReleased;
           return;
@@ -2846,20 +2854,23 @@
           wrap.dataset.theadReleased = "0";
           wrap.classList.remove("thead-follow");
           wrap.style.removeProperty("--thead-follow-y");
-          return;
-        }
-
-        wrap.dataset.theadReleased = "1";
-
-        if (lastRowVisible) {
-          const targetTop = lastRow.getBoundingClientRect().top - headerHeight;
-          const naturalTop = wrap.getBoundingClientRect().top;
-          wrap.style.setProperty("--thead-follow-y", `${targetTop - naturalTop}px`);
-          wrap.classList.add("thead-follow");
         } else {
-          wrap.classList.remove("thead-follow");
-          wrap.style.removeProperty("--thead-follow-y");
+          wrap.dataset.theadReleased = "1";
+
+          if (lastRowVisible) {
+            const targetTop = lastRow.getBoundingClientRect().top - headerHeight;
+            const naturalTop = wrap.getBoundingClientRect().top;
+            wrap.style.setProperty("--thead-follow-y", `${targetTop - naturalTop}px`);
+            wrap.classList.add("thead-follow");
+          } else {
+            wrap.classList.remove("thead-follow");
+            wrap.style.removeProperty("--thead-follow-y");
+          }
         }
+
+        const isPinned = !wrap.classList.contains("thead-follow") && firstTh
+          && firstTh.getBoundingClientRect().top <= stickyTop + 0.5;
+        wrap.classList.toggle("thead-pinned", isPinned);
       });
     }
 
