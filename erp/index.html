@@ -2986,8 +2986,8 @@
         };
 
         const applyFollowTop = (followTop) => {
-          wrap.classList.add("thead-follow");
           wrap.classList.remove("thead-pinned");
+          wrap.classList.add("thead-follow");
           ths.forEach((th) => {
             th.style.top = `${followTop}px`;
           });
@@ -3009,7 +3009,12 @@
           return;
         }
 
-        if (rowsStillBelow.length >= 1) {
+        if (rowsStillBelow.length === 1) {
+          applyFollowTop(wrapRect.top);
+          return;
+        }
+
+        if (rowsStillBelow.length === 2) {
           const anchorRow = rowsStillBelow[0];
           const anchorRect = anchorRow.getBoundingClientRect();
           const anchorTop = anchorRect.top - headerHeight;
@@ -3020,8 +3025,8 @@
           return;
         }
 
-        if (wrapRect.bottom > stickyTop + headerHeight) {
-          applyFollowTop(wrapRect.bottom - headerHeight);
+        if (wrapRect.bottom > stickyTop) {
+          applyFollowTop(wrapRect.top);
           return;
         }
 
