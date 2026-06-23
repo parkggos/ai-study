@@ -40,7 +40,6 @@
       color: var(--text);
       line-height: 1.5;
       min-height: 100vh;
-      overflow-x: hidden;
     }
 
     .app {
@@ -48,6 +47,8 @@
       flex-direction: column;
       min-height: 100vh;
       min-width: 0;
+      max-width: 100%;
+      overflow-x: clip;
     }
 
     /* Top navigation */
@@ -797,10 +798,9 @@
 
     .chart-wrap {
       position: relative;
-      height: 280px;
+      height: 300px;
       width: 100%;
       min-width: 0;
-      overflow: visible;
     }
 
     .chart-wrap.tall { height: 320px; }
@@ -1972,50 +1972,92 @@
         }
       };
 
-      const valueAxis = {
-        ticks: valueAxisTicks,
-        grid: { color: "#f1f5f9" },
-        grace: "8%"
+      const moneyTooltip = {
+        callbacks: {
+          label(ctx) {
+            const val = ctx.parsed.y ?? ctx.parsed.x ?? 0;
+            return ` ${formatMoney(val)}`;
+          }
+        }
       };
 
-      const categoryAxis = {
-        grid: { display: false },
-        offset: true,
-        ticks: { autoSkip: true, maxRotation: 45, minRotation: 0 }
-      };
-
-      const chartLayoutPadding = { top: 4, right: 24, bottom: 4, left: 8 };
-
-      const commonOpts = {
+      const lineChartOpts = {
         responsive: true,
         maintainAspectRatio: false,
-        layout: { padding: chartLayoutPadding },
+        layout: { padding: { top: 8, right: 12, bottom: 4, left: 4 } },
         plugins: {
           legend: { display: false },
-          tooltip: {
-            callbacks: {
-              label(ctx) {
-                const val = ctx.parsed.y ?? ctx.parsed.x ?? 0;
-                return ` ${formatMoney(val)}`;
-              }
-            }
-          }
-        },
-        datasets: {
-          bar: { clip: false, categoryPercentage: 0.75, barPercentage: 0.85 }
+          tooltip: moneyTooltip
         },
         scales: {
-          y: valueAxis,
-          x: categoryAxis
+          y: {
+            ticks: valueAxisTicks,
+            grid: { color: "#f1f5f9" }
+          },
+          x: {
+            grid: { display: false },
+            ticks: { maxRotation: 45, minRotation: 0 }
+          }
+        }
+      };
+
+      const verticalBarOpts = {
+        responsive: true,
+        maintainAspectRatio: false,
+        layout: { padding: { top: 8, right: 20, bottom: 4, left: 4 } },
+        plugins: {
+          legend: { display: false },
+          tooltip: moneyTooltip
+        },
+        datasets: {
+          bar: { clip: false }
+        },
+        scales: {
+          y: {
+            beginAtZero: true,
+            ticks: valueAxisTicks,
+            grid: { color: "#f1f5f9" }
+          },
+          x: {
+            grid: { display: false },
+            offset: true,
+            ticks: {
+              autoSkip: false,
+              maxRotation: 45,
+              minRotation: 0,
+              font: { size: 11 }
+            }
+          }
         }
       };
 
       const horizontalBarOpts = {
-        ...commonOpts,
+        responsive: true,
+        maintainAspectRatio: false,
         indexAxis: "y",
+        layout: { padding: { top: 4, right: 16, bottom: 4, left: 4 } },
+        plugins: {
+          legend: { display: false },
+          tooltip: moneyTooltip
+        },
+        datasets: {
+          bar: { clip: false }
+        },
         scales: {
-          x: { ...valueAxis, grace: "8%" },
-          y: { ...categoryAxis, offset: true }
+          x: {
+            beginAtZero: true,
+            grace: "5%",
+            ticks: valueAxisTicks,
+            grid: { color: "#f1f5f9" }
+          },
+          y: {
+            grid: { display: false },
+            offset: true,
+            ticks: {
+              autoSkip: false,
+              font: { size: 11 }
+            }
+          }
         }
       };
 
@@ -2034,7 +2076,7 @@
             pointHoverRadius: 6
           }]
         },
-        options: commonOpts
+        options: lineChartOpts
       });
 
       dashboardCharts.category = new Chart(document.getElementById("chartCategory"), {
@@ -2050,7 +2092,7 @@
         },
         options: m.categoryEntries.length > 6
           ? horizontalBarOpts
-          : commonOpts
+          : verticalBarOpts
       });
 
       dashboardCharts.channel = new Chart(document.getElementById("chartChannel"), {
@@ -2064,7 +2106,7 @@
             borderRadius: 6
           }]
         },
-        options: commonOpts
+        options: verticalBarOpts
       });
 
       dashboardCharts.payment = new Chart(document.getElementById("chartPayment"), {
@@ -2092,7 +2134,7 @@
             borderRadius: 6
           }]
         },
-        options: commonOpts
+        options: verticalBarOpts
       });
 
       dashboardCharts.orderStatus = new Chart(document.getElementById("chartOrderStatus"), {
@@ -2134,7 +2176,7 @@
             borderRadius: 6
           }]
         },
-        options: commonOpts
+        options: verticalBarOpts
       });
 
       renderProductRankTable(m.productTop10);
