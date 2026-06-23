@@ -827,6 +827,10 @@
       margin-top: 20px;
     }
 
+    .list-grid > .chart-card {
+      min-width: 0;
+    }
+
     .list-grid .chart-card.full { grid-column: 1 / -1; }
 
     .rank-list {
@@ -904,6 +908,14 @@
       border: 1px solid var(--border);
       border-radius: var(--radius);
       background: var(--card);
+      max-width: 100%;
+      min-width: 0;
+    }
+
+    .sticky-list-table-hscroll {
+      overflow-x: auto;
+      max-width: 100%;
+      -webkit-overflow-scrolling: touch;
     }
 
     .sticky-list-table table {
@@ -1405,10 +1417,12 @@
               </div>
             </div>
             <div class="sticky-list-table" id="rawdataTableWrap">
+              <div class="sticky-list-table-hscroll">
               <table>
                 <thead id="tableHead"></thead>
                 <tbody id="tableBody"></tbody>
               </table>
+              </div>
             </div>
             <div class="pagination" id="rawdataPagination"></div>
           </div>
@@ -1939,6 +1953,7 @@
       const el = document.getElementById("listStockRisk");
       el.innerHTML = `
         <div class="sticky-list-table follow-last-row">
+          <div class="sticky-list-table-hscroll">
           <table class="stock-risk-table">
             <thead>
               <tr>
@@ -1965,6 +1980,7 @@
               `).join("")}
             </tbody>
           </table>
+          </div>
         </div>
       `;
     }
@@ -1977,6 +1993,7 @@
       }
       el.innerHTML = `
         <div class="sticky-list-table follow-last-row">
+          <div class="sticky-list-table-hscroll">
           <table class="rank-table">
             <thead>
               <tr>
@@ -2001,6 +2018,7 @@
               `).join("")}
             </tbody>
           </table>
+          </div>
         </div>
       `;
     }
@@ -2013,6 +2031,7 @@
       }
       el.innerHTML = `
         <div class="sticky-list-table follow-last-row">
+          <div class="sticky-list-table-hscroll">
           <table class="rank-table">
             <thead>
               <tr>
@@ -2037,6 +2056,7 @@
               `).join("")}
             </tbody>
           </table>
+          </div>
         </div>
       `;
     }
@@ -2942,6 +2962,18 @@
       return topbar?.getBoundingClientRect().bottom ?? 128;
     }
 
+    function isTableLayoutCramped(wrap) {
+      const table = wrap.querySelector("table");
+      if (!table) return false;
+      const hscroll = wrap.querySelector(".sticky-list-table-hscroll");
+      const container = hscroll || wrap;
+      return table.scrollWidth > container.clientWidth + 2;
+    }
+
+    function canFollowLastRow(wrap) {
+      return wrap.classList.contains("follow-last-row") && !isTableLayoutCramped(wrap);
+    }
+
     function updateStickyChromeTop() {
       const nav = document.querySelector(".sidebar");
       const navH = Math.ceil(nav?.getBoundingClientRect().height ?? nav?.offsetHeight ?? 60);
@@ -2961,7 +2993,8 @@
         const thead = wrap.querySelector("thead");
         const rows = [...wrap.querySelectorAll("tbody tr")];
         const ths = thead ? [...thead.querySelectorAll("th")] : [];
-        const allowFollow = wrap.classList.contains("follow-last-row");
+        const allowFollow = canFollowLastRow(wrap);
+        wrap.classList.toggle("is-cramped", isTableLayoutCramped(wrap));
 
         const clearFollow = () => {
           wrap.classList.remove("thead-follow");
@@ -3010,7 +3043,12 @@
         }
 
         if (rowsStillBelow.length === 1) {
-          applyFollowTop(wrapRect.top);
+          const lastRow = rowsStillBelow[0];
+          const lastRect = lastRow.getBoundingClientRect();
+          const followTop = lastRect.bottom > stickyTop
+            ? Math.max(stickyTop, lastRect.top - headerHeight)
+            : lastRect.top - headerHeight;
+          applyFollowTop(followTop);
           return;
         }
 
