@@ -775,7 +775,7 @@
       display: flex;
       flex-direction: column;
       gap: 0;
-      max-height: 280px;
+      max-height: 420px;
       overflow-y: auto;
     }
 
@@ -883,6 +883,51 @@
       color: var(--mute);
     }
 
+    .history-expand-icon {
+      flex-shrink: 0;
+      width: 20px;
+      height: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--mute);
+      transition: transform 0.2s ease;
+    }
+
+    .history-item-active .history-expand-icon {
+      transform: rotate(180deg);
+      color: var(--primary-dark);
+    }
+
+    .history-detail {
+      margin-top: 6px;
+      padding: 12px 14px 12px calc(1.5rem + 16px);
+      background: var(--surface-soft);
+      border: 1px solid var(--hairline);
+      border-radius: var(--radius-sm);
+    }
+
+    .history-detail-title {
+      font-size: 12px;
+      font-weight: 700;
+      line-height: 1.4;
+      color: var(--mute);
+      margin-bottom: 10px;
+    }
+
+    .history-detail-messages {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .history-detail-messages .chat-msg {
+      max-width: 100%;
+      font-size: 13px;
+      line-height: 1.55;
+      padding: 10px 12px;
+    }
+
     .history-balls,
     .winner-numbers {
       display: flex;
@@ -934,6 +979,27 @@
       font-size: 12px;
       line-height: 1.5;
       margin: -8px 0 12px;
+    }
+
+    .history-toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 10px;
+    }
+
+    .history-summary {
+      color: var(--mute);
+      font-size: 12px;
+      line-height: 1.4;
+    }
+
+    .history-refresh-btn {
+      flex-shrink: 0;
+      min-height: 36px;
+      padding: 6px 12px;
+      font-size: 12px;
     }
 
     .winners-toolbar {
@@ -1411,7 +1477,11 @@
       <section class="card">
         <span class="corner-square" aria-hidden="true"></span>
         <h2 class="card-title">추첨 기록</h2>
-        <p class="history-help">분석·사주 추첨 기록을 클릭하면 오른쪽 채팅창에 번호 선정 이유가 표시됩니다.</p>
+        <p class="history-help">추첨 기록을 클릭하면 행 아래에 선정 이유가 펼쳐집니다.</p>
+        <div class="history-toolbar">
+          <p class="history-summary" id="historySummary">저장된 추첨 기록을 불러오는 중…</p>
+          <button type="button" class="btn-outline history-refresh-btn" id="historyRefreshBtn">기록 새로고침</button>
+        </div>
         <ul class="history-list" id="historyList">
           <li class="empty-history" id="emptyHistory">아직 추첨 기록이 없습니다</li>
         </ul>
@@ -1456,6 +1526,8 @@
     const clearBtn = document.getElementById("clearBtn");
     const autoCountInput = document.getElementById("autoCount");
     const historyList = document.getElementById("historyList");
+    const historySummary = document.getElementById("historySummary");
+    const historyRefreshBtn = document.getElementById("historyRefreshBtn");
     const chatMessages = document.getElementById("chatMessages");
     const chatInput = document.getElementById("chatInput");
     const chatSendBtn = document.getElementById("chatSendBtn");
@@ -2862,20 +2934,89 @@
       };
     }
 
+    function normalizeDrawEntry(draw) {
+      if (!draw || !Array.isArray(draw.numbers) || draw.numbers.length !== COUNT) return null;
+
+      const numbers = draw.numbers.map((n) => Number.parseInt(n, 10));
+      const bonus = Number.parseInt(draw.bonus, 10);
+      if (numbers.some((n) => !Number.isInteger(n) || n < MIN || n > MAX)) return null;
+      if (!Number.isInteger(bonus) || bonus < MIN || bonus > MAX) return null;
+
+      return {
+        id: draw.id || null,
+        numbers: [...numbers].sort((a, b) => a - b),
+        bonus,
+        drawType: draw.drawType || "random",
+        createdAt: draw.createdAt || "",
+        chatLog: Array.isArray(draw.chatLog) ? draw.chatLog : null,
+      };
+    }
+
+    function updateHistorySummary() {
+      if (!historySummary) return;
+
+      if (window.location.protocol === "file:") {
+        historySummary.textContent = "로컬 파일에서는 저장된 추첨 기록을 불러올 수 없습니다.";
+        return;
+      }
+
+      if (history.length === 0) {
+        historySummary.textContent = "저장된 추첨 기록이 없습니다.";
+        return;
+      }
+
+      historySummary.textContent = `저장된 추첨 기록 ${history.length}건 · DB에서 불러옴`;
+    }
+
+    function upsertHistoryEntry(entry) {
+      if (entry.id) {
+        const existingIndex = history.findIndex((item) => item.id === entry.id);
+        if (existingIndex >= 0) {
+          history[existingIndex] = entry;
+          renderHistory();
+          updateHistorySummary();
+          return;
+        }
+      }
+
+      history.unshift(entry);
+      if (history.length > 50) history.pop();
+      renderHistory();
+      updateHistorySummary();
+    }
+
     async function loadDrawHistoryFromSupabase() {
-      if (window.location.protocol === "file:") return;
+      if (window.location.protocol === "file:") {
+        updateHistorySummary();
+        return;
+      }
+
+      if (historySummary) {
+        historySummary.textContent = "저장된 추첨 기록을 불러오는 중…";
+      }
+      if (historyRefreshBtn) historyRefreshBtn.disabled = true;
 
       try {
         const response = await fetch(LOTTO_DRAWS_API_URL);
-        if (!response.ok) return;
+        if (!response.ok) {
+          throw new Error(`기록 불러오기 실패 (${response.status})`);
+        }
 
         const data = await response.json();
-        if (!Array.isArray(data.draws)) return;
-
-        history = data.draws.slice(0, 50);
+        history = (Array.isArray(data.draws) ? data.draws : [])
+          .map(normalizeDrawEntry)
+          .filter(Boolean)
+          .slice(0, 50);
+        selectedHistoryKey = null;
         renderHistory();
-      } catch {
-        // Supabase 미설정 시 로컬 기록만 사용
+        updateHistorySummary();
+      } catch (error) {
+        if (historySummary) {
+          historySummary.textContent =
+            error instanceof Error ? error.message : "저장된 추첨 기록을 불러오지 못했습니다.";
+        }
+      } finally {
+        if (historyRefreshBtn) historyRefreshBtn.disabled = false;
       }
     }
 
@@ -2909,19 +3050,18 @@
       const chatLog =
         drawType === "analysis" || drawType === "saju" ? finishDrawChatCapture() : null;
       const entry = createHistoryEntry(result.numbers, result.bonus, drawType, chatLog);
-      addToHistory(entry);
       const saved = await saveDrawToSupabase(result.numbers, result.bonus, drawType, chatLog);
       if (saved?.id) {
         entry.id = saved.id;
         entry.createdAt = saved.createdAt || entry.createdAt;
         entry.chatLog = saved.chatLog || chatLog;
+        entry.drawType = saved.drawType || drawType;
       }
+      upsertHistoryEntry(entry);
     }
 
     function addToHistory(entry) {
-      history.unshift(entry);
-      if (history.length > 50) history.pop();
-      renderHistory();
+      upsertHistoryEntry(entry);
     }
 
     function getDrawTypeLabel(drawType) {
@@ -2932,30 +3072,58 @@
       return entry.id || `local-${history.length - index}-${entry.createdAt || index}`;
     }
 
-    function showHistoryEntryReason(entry, index) {
-      switchTab("draw");
-      selectedHistoryKey = getHistoryEntryKey(entry, index);
-      renderHistory();
-
-      if (!chatMessages) return;
-
-      chatMessages.innerHTML = "";
-      const title = `${getDrawTypeLabel(entry.drawType)} 추첨 · ${entry.createdAt || "기록"}`;
-      appendChatMessage("bot", title);
+    function buildHistoryDetailMessages(entry) {
+      const messages = [];
 
       if (Array.isArray(entry.chatLog) && entry.chatLog.length) {
         entry.chatLog.forEach((msg) => {
-          appendChatMessage(msg.type || "bot", msg.text);
+          messages.push({ type: msg.type || "bot", text: msg.text || "" });
         });
-        return;
+        return messages;
       }
 
       if (entry.drawType === "analysis" || entry.drawType === "saju") {
-        appendChatMessage("bot", "저장된 선정 이유가 없습니다. (이전 기록이거나 저장에 실패했을 수 있습니다.)");
-        return;
+        messages.push({
+          type: "bot",
+          text: "저장된 선정 이유가 없습니다. (이전 기록이거나 저장에 실패했을 수 있습니다.)",
+        });
+        return messages;
       }
 
-      appendChatMessage("bot", "무작위 추첨으로 생성된 번호라 별도의 선정 이유가 없습니다.");
+      messages.push({
+        type: "bot",
+        text: "무작위 추첨으로 생성된 번호라 별도의 선정 이유가 없습니다.",
+      });
+      return messages;
+    }
+
+    function createHistoryDetailElement(entry) {
+      const detail = document.createElement("div");
+      detail.className = "history-detail";
+
+      const title = document.createElement("p");
+      title.className = "history-detail-title";
+      title.textContent = `${getDrawTypeLabel(entry.drawType)} 추첨 선정 이유`;
+      detail.appendChild(title);
+
+      const messagesWrap = document.createElement("div");
+      messagesWrap.className = "history-detail-messages";
+
+      buildHistoryDetailMessages(entry).forEach((msg) => {
+        const msgEl = document.createElement("div");
+        msgEl.className = `chat-msg ${msg.type}`;
+        msgEl.textContent = msg.text;
+        messagesWrap.appendChild(msgEl);
+      });
+
+      detail.appendChild(messagesWrap);
+      return detail;
+    }
+
+    function toggleHistoryEntryDetail(entry, index) {
+      const entryKey = getHistoryEntryKey(entry, index);
+      selectedHistoryKey = selectedHistoryKey === entryKey ? null : entryKey;
+      renderHistory();
     }
 
     function renderHistory() {
@@ -2965,26 +3133,32 @@
         const li = document.createElement("li");
         li.className = "empty-history";
         li.id = "emptyHistory";
-        li.textContent = "아직 추첨 기록이 없습니다";
+        li.textContent =
+          window.location.protocol === "file:"
+            ? "로컬 파일에서는 저장된 추첨 기록을 불러올 수 없습니다"
+            : "저장된 추첨 기록이 없습니다";
         historyList.appendChild(li);
+        updateHistorySummary();
         return;
       }
 
       historyList.innerHTML = "";
       history.forEach((entry, index) => {
         const entryKey = getHistoryEntryKey(entry, index);
+        const isExpanded = selectedHistoryKey === entryKey;
         const li = document.createElement("li");
         li.className = "history-item history-item-clickable";
-        if (selectedHistoryKey === entryKey) {
+        if (isExpanded) {
           li.classList.add("history-item-active");
         }
 
         const main = document.createElement("button");
         main.type = "button";
         main.className = "history-item-main";
+        main.setAttribute("aria-expanded", isExpanded ? "true" : "false");
         main.setAttribute(
           "aria-label",
-          `${getDrawTypeLabel(entry.drawType)} 추첨 기록 ${history.length - index}번, 선정 이유 보기`
+          `${getDrawTypeLabel(entry.drawType)} 추첨 기록 ${history.length - index}번, 선정 이유 ${isExpanded ? "접기" : "펼치기"}`
         );
 
         const idx = document.createElement("span");
@@ -3013,6 +3187,11 @@
           ballsWrap.appendChild(createHistoryBall(entry.bonus, true));
         }
 
+        const expandIcon = document.createElement("span");
+        expandIcon.className = "history-expand-icon";
+        expandIcon.setAttribute("aria-hidden", "true");
+        expandIcon.textContent = "▾";
+
         main.appendChild(idx);
         main.appendChild(typeBadge);
         main.appendChild(ballsWrap);
@@ -3024,23 +3203,21 @@
           main.appendChild(timeEl);
         }
 
+        main.appendChild(expandIcon);
+
         main.addEventListener("click", () => {
-          showHistoryEntryReason(entry, index);
+          toggleHistoryEntryDetail(entry, index);
         });
 
         li.appendChild(main);
 
-        if (entry.drawType === "analysis" || entry.drawType === "saju") {
-          const hint = document.createElement("p");
-          hint.className = "history-reason-hint";
-          hint.textContent = entry.chatLog?.length
-            ? "클릭하면 번호 선정 이유 보기"
-            : "선정 이유 없음";
-          li.appendChild(hint);
+        if (isExpanded) {
+          li.appendChild(createHistoryDetailElement(entry));
         }
 
         historyList.appendChild(li);
       });
+      updateHistorySummary();
     }
 
     function setControlsDisabled(disabled) {
@@ -3134,6 +3311,10 @@
       selectedHistoryKey = null;
       renderHistory();
       resetDrawStage();
+    });
+
+    historyRefreshBtn.addEventListener("click", () => {
+      loadDrawHistoryFromSupabase();
     });
 
     initCanvas();
