@@ -2977,38 +2977,51 @@
         const headerHeight = thead.offsetHeight;
         const headerBottom = stickyTop + headerHeight;
         const firstTh = ths[0];
+        const wrapRect = wrap.getBoundingClientRect();
 
-        if (!allowFollow || rows.length === 1) {
-          clearFollow();
-          const isPinned = wrap.getBoundingClientRect().top < stickyTop - 0.5
+        const applyPinned = () => {
+          const isPinned = wrapRect.top < stickyTop - 0.5
             && firstTh && firstTh.getBoundingClientRect().top <= stickyTop + 0.5;
           wrap.classList.toggle("thead-pinned", isPinned);
-          return;
-        }
+        };
 
-        const lastRow = rows[rows.length - 1];
-        const secondLastRow = rows[rows.length - 2];
-        const secondLastPast = secondLastRow.getBoundingClientRect().bottom <= headerBottom;
-        const lastRowVisible = lastRow.getBoundingClientRect().bottom > stickyTop;
-
-        if (!secondLastPast) {
-          clearFollow();
-          const isPinned = wrap.getBoundingClientRect().top < stickyTop - 0.5
-            && firstTh && firstTh.getBoundingClientRect().top <= stickyTop + 0.5;
-          wrap.classList.toggle("thead-pinned", isPinned);
-          return;
-        }
-
-        if (lastRowVisible) {
+        const applyFollowTop = (followTop) => {
           wrap.classList.add("thead-follow");
           wrap.classList.remove("thead-pinned");
-          const followTop = Math.max(
-            stickyTop,
-            lastRow.getBoundingClientRect().top - headerHeight
-          );
           ths.forEach((th) => {
             th.style.top = `${followTop}px`;
           });
+        };
+
+        if (!allowFollow || rows.length === 1) {
+          clearFollow();
+          applyPinned();
+          return;
+        }
+
+        const rowsStillBelow = rows.filter(
+          (row) => row.getBoundingClientRect().bottom > headerBottom
+        );
+
+        if (rowsStillBelow.length > 2) {
+          clearFollow();
+          applyPinned();
+          return;
+        }
+
+        if (rowsStillBelow.length >= 1) {
+          const anchorRow = rowsStillBelow[0];
+          const anchorRect = anchorRow.getBoundingClientRect();
+          const anchorTop = anchorRect.top - headerHeight;
+          const followTop = anchorRect.bottom > stickyTop
+            ? Math.max(stickyTop, anchorTop)
+            : anchorTop;
+          applyFollowTop(followTop);
+          return;
+        }
+
+        if (wrapRect.bottom > stickyTop + headerHeight) {
+          applyFollowTop(wrapRect.bottom - headerHeight);
           return;
         }
 
