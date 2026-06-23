@@ -1,10 +1,17 @@
+function normalizeSupabaseUrl(url) {
+  return url
+    .trim()
+    .replace(/\/+$/, "")
+    .replace(/\/rest\/v1$/i, "");
+}
+
 function getSupabaseConfig() {
-  const url = process.env.SUPABASE_URL;
+  const rawUrl = process.env.SUPABASE_URL;
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!url || !key) {
+  if (!rawUrl || !key) {
     throw new Error("SUPABASE_URL과 SUPABASE_SERVICE_ROLE_KEY가 Vercel 환경 변수에 설정되어 있지 않습니다.");
   }
-  return { url: url.replace(/\/$/, ""), key };
+  return { url: normalizeSupabaseUrl(rawUrl), key };
 }
 
 async function supabaseRequest(table, { method = "GET", query = "", body, prefer } = {}) {
