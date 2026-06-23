@@ -917,6 +917,26 @@
       border-spacing: 0;
     }
 
+    .sticky-list-table.has-x-scroll {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .sticky-list-table.has-x-scroll table {
+      min-width: max-content;
+    }
+
+    .sticky-list-table.has-x-scroll thead th {
+      position: static;
+      top: auto;
+      box-shadow: inset 0 -1px 0 var(--border);
+    }
+
+    .sticky-list-table.has-x-scroll.thead-pinned thead th::before,
+    .sticky-list-table.has-x-scroll.thead-follow thead th::before {
+      display: none;
+    }
+
     .sticky-list-table thead th {
       position: sticky;
       top: var(--sticky-chrome-top, 128px);
@@ -2956,6 +2976,12 @@
       return topbar?.getBoundingClientRect().bottom ?? 128;
     }
 
+    function isTableCramped(wrap) {
+      const table = wrap.querySelector("table");
+      if (!table) return false;
+      return table.scrollWidth > wrap.clientWidth + 2;
+    }
+
     function updateStickyChromeTop() {
       const nav = document.querySelector(".sidebar");
       const navH = Math.ceil(nav?.getBoundingClientRect().height ?? nav?.offsetHeight ?? 60);
@@ -2975,7 +3001,10 @@
         const thead = wrap.querySelector("thead");
         const rows = [...wrap.querySelectorAll("tbody tr")];
         const ths = thead ? [...thead.querySelectorAll("th")] : [];
-        const allowFollow = wrap.classList.contains("follow-last-row");
+        const cramped = isTableCramped(wrap);
+        const allowFollow = wrap.classList.contains("follow-last-row") && !cramped;
+
+        wrap.classList.toggle("has-x-scroll", cramped);
 
         const clearFollow = () => {
           wrap.classList.remove("thead-follow");
@@ -2985,6 +3014,12 @@
         if (!thead || !rows.length) {
           clearFollow();
           wrap.classList.remove("thead-pinned");
+          return;
+        }
+
+        if (cramped) {
+          clearFollow();
+          wrap.classList.remove("thead-pinned", "thead-follow");
           return;
         }
 
@@ -3015,32 +3050,25 @@
           return;
         }
 
-        const rowsStillBelow = rows.filter(
-          (row) => row.getBoundingClientRect().bottom > headerBottom
-        );
+        const lastRow = rows[rows.length - 1];
+        const secondLastRow = rows[rows.length - 2];
+        const secondLastPast = secondLastRow.getBoundingClientRect().bottom <= headerBottom;
+        const lastRowVisible = lastRow.getBoundingClientRect().bottom > stickyTop;
 
-        if (rowsStillBelow.length > 2) {
+        if (!secondLastPast) {
           clearFollow();
           applyPinned();
           return;
         }
 
-        if (rowsStillBelow.length === 2) {
-          const anchorRow = rowsStillBelow[0];
-          const anchorRect = anchorRow.getBoundingClientRect();
-          applyFollowTop(anchorRect.top - headerHeight, anchorRect.bottom);
-          return;
-        }
-
-        if (rowsStillBelow.length === 1) {
-          const lastRow = rowsStillBelow[0];
+        if (lastRowVisible) {
           const lastRect = lastRow.getBoundingClientRect();
           applyFollowTop(lastRect.top - headerHeight, lastRect.bottom);
           return;
         }
 
         clearFollow();
-        applyPinned();
+        wrap.classList.remove("thead-pinned");
       });
     }
 
