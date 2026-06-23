@@ -1,4 +1,5 @@
 const { supabaseRequest } = require("./lib/supabase");
+const { formatKstDateTime, formatKstIso } = require("./lib/kst");
 
 const DRAW_TYPES = new Set(["random", "analysis", "saju", "auto"]);
 const CHAT_TYPES = new Set(["user", "bot", "error"]);
@@ -62,7 +63,7 @@ function mapRow(row) {
     numbers: row.numbers,
     bonus: row.bonus,
     drawType: row.draw_type,
-    createdAt: row.created_at,
+    createdAt: formatKstDateTime(row.created_at),
     chatLog: row.chat_log || null,
   };
 }
@@ -115,6 +116,7 @@ module.exports = async function handler(req, res) {
         numbers: sortedNumbers,
         bonus,
         draw_type: body.drawType || "random",
+        created_at: formatKstIso(),
       };
       if (chatLog) insertBody.chat_log = chatLog;
 
