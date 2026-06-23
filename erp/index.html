@@ -831,6 +831,10 @@
       min-width: 0;
     }
 
+    .list-grid .chart-card > div:not(.card-title) {
+      min-width: 0;
+    }
+
     .list-grid .chart-card.full { grid-column: 1 / -1; }
 
     .rank-list {
@@ -921,7 +925,9 @@
       position: sticky;
       top: var(--sticky-chrome-top, 128px);
       z-index: 35;
+      width: 100%;
       max-width: 100%;
+      overflow-x: hidden;
       background: var(--bg);
     }
 
