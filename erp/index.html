@@ -2147,30 +2147,23 @@
       const points = meta.data.map((el) => ({ x: el.x + dx, y: el.y + dy }));
 
       ctx.save();
-      ctx.fillStyle = shadeChartColor(color, -0.35);
+      ctx.fillStyle = shadeChartColor(color, -0.28);
       ctx.beginPath();
       ctx.moveTo(points[0].x, chartArea.bottom + dy);
       points.forEach((p) => ctx.lineTo(p.x, p.y));
       ctx.lineTo(points[points.length - 1].x, chartArea.bottom + dy);
       ctx.closePath();
-      ctx.globalAlpha = 0.45;
+      ctx.globalAlpha = 0.4;
       ctx.fill();
-      ctx.globalAlpha = 1;
 
-      ctx.strokeStyle = shadeChartColor(color, -0.22);
-      ctx.lineWidth = 2.5;
-      ctx.beginPath();
-      points.forEach((p, idx) => {
-        if (idx === 0) ctx.moveTo(p.x, p.y);
-        else ctx.lineTo(p.x, p.y);
-      });
-      ctx.stroke();
-
-      points.forEach((p) => {
-        ctx.fillStyle = shadeChartColor(color, -0.18);
+      meta.data.forEach((el, i) => {
+        ctx.strokeStyle = shadeChartColor(color, -0.12);
+        ctx.lineWidth = 1;
+        ctx.globalAlpha = 0.35;
         ctx.beginPath();
-        ctx.arc(p.x, p.y, 4, 0, Math.PI * 2);
-        ctx.fill();
+        ctx.moveTo(el.x, el.y);
+        ctx.lineTo(points[i].x, points[i].y);
+        ctx.stroke();
       });
       ctx.restore();
     }
@@ -2442,6 +2435,8 @@
         }
       };
 
+      const line3dOn = isChart3dEnabled();
+
       dashboardCharts.monthly = new Chart(document.getElementById("chartMonthly"), {
         type: "line",
         data: {
@@ -2450,8 +2445,8 @@
             label: "매출",
             data: m.monthlyValues,
             borderColor: "#7EB8DA",
-            backgroundColor: "rgba(168, 216, 234, 0.35)",
-            fill: true,
+            backgroundColor: line3dOn ? "rgba(168, 216, 234, 0.2)" : "rgba(168, 216, 234, 0.35)",
+            fill: !line3dOn,
             tension: 0.3,
             pointRadius: 4,
             pointHoverRadius: 6
