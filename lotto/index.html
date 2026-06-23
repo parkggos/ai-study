@@ -839,6 +839,13 @@
       outline-offset: 1px;
     }
 
+    .history-bonus-plus {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--mute);
+      margin: 0 2px;
+    }
+
     .empty-history {
       color: var(--mute);
       font-size: 15px;
@@ -1396,6 +1403,8 @@
     let isDrawing = false;
     let history = [];
     let audioCtx = null;
+
+    const LOTTO_DRAWS_API_URL = `${window.location.origin}/api/lotto-draws`;
 
     const BALL_COLORS = {
       1: ["#fff4a8", "#fbc02d", "#c9a000"],
@@ -2700,11 +2709,65 @@
       drawStatus.classList.remove("drawing");
       if (!fast) playComplete();
 
-      return sorted;
+      return { numbers: sorted, bonus };
     }
 
-    function addToHistory(numbers) {
-      history.unshift(numbers);
+    function createHistoryEntry(numbers, bonus, drawType = "random") {
+      return {
+        numbers: [...numbers].sort((a, b) => a - b),
+        bonus,
+        drawType,
+        createdAt: new Date().toISOString(),
+      };
+    }
+
+    async function loadDrawHistoryFromSupabase() {
+      if (window.location.protocol === "file:") return;
+
+      try {
+        const response = await fetch(LOTTO_DRAWS_API_URL);
+        if (!response.ok) return;
+
+        const data = await response.json();
+        if (!Array.isArray(data.draws)) return;
+
+        history = data.draws.slice(0, 50);
+        renderHistory();
+      } catch {
+        // Supabase 미설정 시 로컬 기록만 사용
+      }
+    }
+
+    async function saveDrawToSupabase(numbers, bonus, drawType = "random") {
+      if (window.location.protocol === "file:") return null;
+
+      try {
+        const response = await fetch(LOTTO_DRAWS_API_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ numbers, bonus, drawType }),
+        });
+
+        if (!response.ok) return null;
+        const data = await response.json();
+        return data.draw || null;
+      } catch {
+        return null;
+      }
+    }
+
+    async function persistDrawHistory(numbers, bonus, drawType = "random") {
+      const entry = createHistoryEntry(numbers, bonus, drawType);
+      addToHistory(entry);
+      const saved = await saveDrawToSupabase(entry.numbers, entry.bonus, drawType);
+      if (saved?.id) {
+        entry.id = saved.id;
+        entry.createdAt = saved.createdAt || entry.createdAt;
+      }
+    }
+
+    function addToHistory(entry) {
+      history.unshift(entry);
       if (history.length > 50) history.pop();
       renderHistory();
     }
@@ -2721,7 +2784,7 @@
       }
 
       historyList.innerHTML = "";
-      history.forEach((nums, index) => {
+      history.forEach((entry, index) => {
         const li = document.createElement("li");
         li.className = "history-item";
 
@@ -2731,12 +2794,21 @@
 
         const ballsWrap = document.createElement("div");
         ballsWrap.className = "history-balls";
-        nums.forEach((num) => {
+        entry.numbers.forEach((num) => {
           const ball = document.createElement("span");
           ball.className = `history-ball zone-${getZone(num)}`;
           ball.textContent = num;
           ballsWrap.appendChild(ball);
         });
+
+        if (entry.bonus) {
+          const plus = document.createElement("span");
+          plus.className = "history-bonus-plus";
+          plus.textContent = "+";
+          plus.setAttribute("aria-hidden", "true");
+          ballsWrap.appendChild(plus);
+          ballsWrap.appendChild(createHistoryBall(entry.bonus, true));
+        }
 
         li.appendChild(idx);
         li.appendChild(ballsWrap);
@@ -2761,25 +2833,26 @@
       statusPrefix = "",
       analysisNote = "",
       analysisContext = null,
+      drawType = "random",
     } = {}) {
       if (isDrawing) return null;
       isDrawing = true;
       setControlsDisabled(true);
 
-      const numbers = await runLiveDraw({ fast, preset, statusPrefix, analysisNote, analysisContext });
+      const result = await runLiveDraw({ fast, preset, statusPrefix, analysisNote, analysisContext });
 
       if (addHistory) {
-        addToHistory(numbers);
+        await persistDrawHistory(result.numbers, result.bonus, drawType);
       }
 
       isDrawing = false;
       setControlsDisabled(false);
-      return numbers;
+      return result;
     }
 
     drawBtn.addEventListener("click", () => {
       ensureAudio();
-      performDraw({ fast: false });
+      performDraw({ fast: false, drawType: "random" });
     });
 
     analyzeDrawBtn.addEventListener("click", () => {
@@ -2800,6 +2873,7 @@
         preset: { numbers: analyzed.main, bonus: analyzed.bonus },
         statusPrefix: "분석 추첨",
         analysisNote,
+        drawType: "analysis",
         analysisContext: analyzed.analysis
           ? {
               summary: analyzed.analysis.summary,
@@ -2820,7 +2894,7 @@
       autoCountInput.value = count;
 
       for (let i = 0; i < count; i++) {
-        await performDraw({ fast: i > 0 });
+        await performDraw({ fast: i > 0, drawType: "auto" });
         if (i < count - 1) {
           await sleep(300);
         }
@@ -2835,6 +2909,7 @@
 
     initCanvas();
     resetDrawStage();
+    loadDrawHistoryFromSupabase();
 
     autoCountInput.addEventListener("change", () => {
       const val = parseInt(autoCountInput.value, 10);
@@ -3282,7 +3357,7 @@
         sajuChatStarted = true;
         appendChatMessage("bot", "사주 분석 완료 · 추첨기가 계속 돌아가며 번호를 뽑습니다.");
 
-        const sorted = await runLiveDraw({
+        const result = await runLiveDraw({
           fast: false,
           preset: data.recommendation,
           statusPrefix: "사주 추천",
@@ -3292,7 +3367,7 @@
             recommendation: data.recommendation,
           },
         });
-        addToHistory(sorted);
+        await persistDrawHistory(result.numbers, result.bonus, "saju");
       } catch (err) {
         loadingMsg.remove();
         stopChuteSpin();
