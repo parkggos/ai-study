@@ -48,7 +48,6 @@
       min-height: 100vh;
       min-width: 0;
       max-width: 100%;
-      overflow-x: clip;
     }
 
     /* Top navigation */
@@ -904,8 +903,6 @@
     .sticky-list-table {
       border: 1px solid var(--border);
       border-radius: var(--radius);
-      overflow-x: auto;
-      overflow-y: visible;
       background: var(--card);
     }
 
@@ -922,16 +919,12 @@
       box-shadow: inset 0 -1px 0 var(--border);
     }
 
-    .sticky-list-table:not(.thead-pinned) thead th:first-child {
+    .sticky-list-table thead th:first-child {
       border-top-left-radius: calc(var(--radius) - 1px);
     }
 
-    .sticky-list-table:not(.thead-pinned) thead th:last-child {
+    .sticky-list-table thead th:last-child {
       border-top-right-radius: calc(var(--radius) - 1px);
-    }
-
-    .sticky-list-table.thead-pinned thead th {
-      box-shadow: inset 0 -1px 0 var(--border), 0 -12px 0 0 var(--bg);
     }
 
     .sticky-list-table tbody tr:last-child td:first-child {
@@ -940,27 +933,6 @@
 
     .sticky-list-table tbody tr:last-child td:last-child {
       border-bottom-right-radius: calc(var(--radius) - 1px);
-    }
-
-    .sticky-list-table.thead-follow thead {
-      position: relative;
-      transform: translateY(var(--thead-follow-y, 0));
-      z-index: 35;
-    }
-
-    .sticky-list-table.thead-follow thead th {
-      position: relative;
-      top: auto;
-      background: var(--bg);
-      box-shadow: inset 0 -1px 0 var(--border);
-    }
-
-    .sticky-list-table.thead-follow thead th:first-child {
-      border-top-left-radius: calc(var(--radius) - 1px);
-    }
-
-    .sticky-list-table.thead-follow thead th:last-child {
-      border-top-right-radius: calc(var(--radius) - 1px);
     }
 
     .stock-risk-table th.num,
@@ -1130,6 +1102,43 @@
     .report-list.risk li { color: #b45309; }
     .report-list.findings li { color: #1e40af; }
 
+    .report-chart-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin: 16px 0 4px;
+    }
+
+    .report-chart-grid .report-chart-card.full {
+      grid-column: 1 / -1;
+    }
+
+    .report-chart-card {
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 14px 16px 10px;
+      background: #fafbfc;
+    }
+
+    .report-chart-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+    }
+
+    .report-chart-wrap {
+      position: relative;
+      height: 220px;
+    }
+
+    .report-chart-image {
+      display: block;
+      width: 100%;
+      height: auto;
+      border-radius: 6px;
+    }
+
     .report-summary-box {
       background: var(--primary-light);
       border-radius: var(--radius);
@@ -1163,6 +1172,7 @@
     @media (max-width: 768px) {
       .report-document { padding: 24px 20px; }
       .report-doc-title { font-size: 22px; }
+      .report-chart-grid { grid-template-columns: 1fr; }
     }
 
     @media (max-width: 900px) {
@@ -1490,6 +1500,8 @@
     let toastTimer = null;
     let cachedReportData = null;
     let reportGenerating = false;
+    let reportChartInstances = {};
+    let reportChartUid = 0;
     let dashboardCharts = {
       monthly: null, category: null, channel: null,
       payment: null, tier: null, orderStatus: null, brand: null, region: null
@@ -1903,7 +1915,7 @@
     function renderStockRiskTable(items) {
       const el = document.getElementById("listStockRisk");
       el.innerHTML = `
-        <div class="sticky-list-table follow-last-row">
+        <div class="sticky-list-table">
           <table class="stock-risk-table">
             <thead>
               <tr>
@@ -1941,7 +1953,7 @@
         return;
       }
       el.innerHTML = `
-        <div class="sticky-list-table follow-last-row">
+        <div class="sticky-list-table">
           <table class="rank-table">
             <thead>
               <tr>
@@ -1977,7 +1989,7 @@
         return;
       }
       el.innerHTML = `
-        <div class="sticky-list-table follow-last-row">
+        <div class="sticky-list-table">
           <table class="rank-table">
             <thead>
               <tr>
@@ -2913,83 +2925,6 @@
       const chromeTop = getStickyChromeTop();
       document.documentElement.style.setProperty("--nav-height", `${navH}px`);
       document.documentElement.style.setProperty("--sticky-chrome-top", `${chromeTop}px`);
-      scheduleDashboardListStickyHeaders();
-    }
-
-    let stickyHeaderTicking = false;
-
-    function updateDashboardListStickyHeaders() {
-      const stickyTop = getStickyChromeTop();
-      document.documentElement.style.setProperty("--sticky-chrome-top", `${stickyTop}px`);
-
-      document.querySelectorAll(".sticky-list-table").forEach((wrap) => {
-        const thead = wrap.querySelector("thead");
-        const rows = [...wrap.querySelectorAll("tbody tr")];
-        const firstTh = thead?.querySelector("th");
-        const allowFollow = wrap.classList.contains("follow-last-row");
-
-        if (!thead || !rows.length) {
-          wrap.classList.remove("thead-follow", "thead-pinned");
-          wrap.style.removeProperty("--thead-follow-y");
-          delete wrap.dataset.theadReleased;
-          return;
-        }
-
-        const headerHeight = thead.offsetHeight;
-        const headerBottom = stickyTop + headerHeight;
-
-        if (!allowFollow) {
-          wrap.classList.remove("thead-follow");
-          wrap.style.removeProperty("--thead-follow-y");
-          delete wrap.dataset.theadReleased;
-          const isPinned = firstTh && firstTh.getBoundingClientRect().top <= stickyTop + 0.5;
-          wrap.classList.toggle("thead-pinned", isPinned);
-          return;
-        }
-
-        if (rows.length === 1) {
-          wrap.classList.remove("thead-follow", "thead-pinned");
-          wrap.style.removeProperty("--thead-follow-y");
-          delete wrap.dataset.theadReleased;
-          return;
-        }
-
-        const lastRow = rows[rows.length - 1];
-        const secondLastRow = rows[rows.length - 2];
-        const secondLastPast = secondLastRow.getBoundingClientRect().bottom <= headerBottom;
-        const lastRowVisible = lastRow.getBoundingClientRect().bottom > stickyTop;
-
-        if (!secondLastPast) {
-          wrap.dataset.theadReleased = "0";
-          wrap.classList.remove("thead-follow");
-          wrap.style.removeProperty("--thead-follow-y");
-        } else {
-          wrap.dataset.theadReleased = "1";
-
-          if (lastRowVisible) {
-            const targetTop = lastRow.getBoundingClientRect().top - headerHeight;
-            const naturalTop = wrap.getBoundingClientRect().top;
-            wrap.style.setProperty("--thead-follow-y", `${targetTop - naturalTop}px`);
-            wrap.classList.add("thead-follow");
-          } else {
-            wrap.classList.remove("thead-follow");
-            wrap.style.removeProperty("--thead-follow-y");
-          }
-        }
-
-        const isPinned = !wrap.classList.contains("thead-follow") && firstTh
-          && firstTh.getBoundingClientRect().top <= stickyTop + 0.5;
-        wrap.classList.toggle("thead-pinned", isPinned);
-      });
-    }
-
-    function scheduleDashboardListStickyHeaders() {
-      if (stickyHeaderTicking) return;
-      stickyHeaderTicking = true;
-      requestAnimationFrame(() => {
-        updateDashboardListStickyHeaders();
-        stickyHeaderTicking = false;
-      });
     }
 
     function switchPanel(panelId) {
@@ -3104,10 +3039,274 @@
       };
     }
 
-    function buildReportDocumentHtml(report, generatedAt) {
-      const dateStr = new Date(generatedAt).toLocaleString("ko-KR");
+    const REPORT_CHART_META = {
+      monthly: {
+        title: "월별 매출 추이",
+        available: (m) => m.monthlyLabels.length > 1
+      },
+      category: {
+        title: "카테고리별 매출",
+        available: (m) => m.categoryEntries.length > 0
+      },
+      channel: {
+        title: "채널별 매출",
+        available: (m) => m.channelEntries.length > 0
+      },
+      payment: {
+        title: "결제수단별 매출",
+        available: (m) => m.paymentEntries.length > 0
+      },
+      tier: {
+        title: "고객 등급별 매출",
+        available: (m) => m.tierEntries.length > 0
+      },
+      orderStatus: {
+        title: "주문 상태 분포",
+        available: (m) => m.statusEntries.length > 0
+      },
+      brand: {
+        title: "브랜드별 매출 TOP",
+        available: (m) => m.brandEntries.length > 0
+      },
+      region: {
+        title: "지역별 매출 TOP",
+        available: (m) => m.regionEntries.length > 0
+      }
+    };
+
+    const REPORT_CHART_COLORS = [
+      "#A8D8EA", "#C9B8E8", "#B5EAD7", "#FFE5B4",
+      "#FFB7C5", "#B8E0D2", "#FFD6A5", "#D4E4FF"
+    ];
+
+    function isValidReportChartId(id) {
+      return Object.prototype.hasOwnProperty.call(REPORT_CHART_META, id);
+    }
+
+    function getAvailableReportChartIds(m) {
+      return Object.keys(REPORT_CHART_META).filter((id) => REPORT_CHART_META[id].available(m));
+    }
+
+    function inferChartsFromHeading(heading) {
+      const h = String(heading || "");
+      const ids = [];
+      if (/매출|추이|월별|성장|실적/.test(h)) ids.push("monthly");
+      if (/카테고리|상품|품목/.test(h)) ids.push("category");
+      if (/채널|유통|판매경로/.test(h)) ids.push("channel");
+      if (/결제|수단/.test(h)) ids.push("payment");
+      if (/고객|등급|세그먼트|충성|VIP/.test(h)) ids.push("tier");
+      if (/주문|상태|취소|반품/.test(h)) ids.push("orderStatus");
+      if (/브랜드/.test(h)) ids.push("brand");
+      if (/지역/.test(h)) ids.push("region");
+      return ids;
+    }
+
+    function resolveSectionChartIds(section, m) {
+      const fromAi = Array.isArray(section.charts)
+        ? section.charts.filter(isValidReportChartId)
+        : [];
+      const inferred = inferChartsFromHeading(section.heading);
+      const merged = [...new Set([...fromAi, ...inferred])];
+      return merged
+        .filter((id) => REPORT_CHART_META[id].available(m))
+        .slice(0, 2);
+    }
+
+    function buildReportChartsHtml(chartIds, chartImages = {}) {
+      if (!chartIds.length) return "";
+
+      return `
+        <div class="report-chart-grid">
+          ${chartIds.map((id) => {
+            const uid = `rc-${id}-${reportChartUid++}`;
+            const title = REPORT_CHART_META[id].title;
+            const fullClass = chartIds.length === 1 ? " full" : "";
+            const media = chartImages[id]
+              ? `<img src="${chartImages[id]}" alt="${escapeHtml(title)}" class="report-chart-image" />`
+              : `<canvas id="${uid}" data-report-chart="${id}"></canvas>`;
+            return `
+              <div class="report-chart-card${fullClass}">
+                <div class="report-chart-title">${escapeHtml(title)}</div>
+                <div class="report-chart-wrap">${media}</div>
+              </div>
+            `;
+          }).join("")}
+        </div>
+      `;
+    }
+
+    function destroyReportCharts() {
+      Object.keys(reportChartInstances).forEach((key) => {
+        if (reportChartInstances[key]) {
+          reportChartInstances[key].destroy();
+          reportChartInstances[key] = null;
+        }
+      });
+      reportChartInstances = {};
+    }
+
+    function createReportChart(canvas, chartId, m) {
+      const colors = REPORT_CHART_COLORS;
+      const valueTicks = {
+        callback(v) {
+          if (v >= 1e8) return (v / 1e8).toFixed(0) + "억";
+          if (v >= 1e4) return (v / 1e4).toFixed(0) + "만";
+          return v.toLocaleString("ko-KR");
+        }
+      };
+      const baseOpts = {
+        responsive: true,
+        maintainAspectRatio: false,
+        animation: false,
+        plugins: {
+          legend: { display: false },
+          chart3d: { enabled: false }
+        }
+      };
+
+      if (chartId === "monthly") {
+        return new Chart(canvas, {
+          type: "line",
+          data: {
+            labels: m.monthlyLabels,
+            datasets: [{
+              data: m.monthlyValues,
+              borderColor: "#7EB8DA",
+              backgroundColor: "rgba(168, 216, 234, 0.25)",
+              fill: true,
+              tension: 0.3,
+              pointRadius: 3
+            }]
+          },
+          options: {
+            ...baseOpts,
+            scales: {
+              y: { ticks: valueTicks, grid: { color: "#f1f5f9" } },
+              x: { grid: { display: false } }
+            }
+          }
+        });
+      }
+
+      if (chartId === "payment" || chartId === "orderStatus") {
+        const entries = chartId === "payment" ? m.paymentEntries : m.statusEntries;
+        const isMoney = chartId === "payment";
+        return new Chart(canvas, {
+          type: "pie",
+          data: {
+            labels: entries.map(([k]) => k),
+            datasets: [{
+              data: entries.map(([, v]) => v),
+              backgroundColor: entries.map((_, i) => colors[i % colors.length]),
+              borderWidth: 2,
+              borderColor: "#fff"
+            }]
+          },
+          options: {
+            ...baseOpts,
+            plugins: {
+              ...baseOpts.plugins,
+              legend: { position: "right", labels: { boxWidth: 10, font: { size: 11 } } },
+              tooltip: {
+                callbacks: {
+                  label(ctx) {
+                    const val = ctx.parsed;
+                    const total = ctx.dataset.data.reduce((a, b) => a + b, 0);
+                    const pct = total > 0 ? ((val / total) * 100).toFixed(1) : 0;
+                    const formatted = isMoney ? formatMoney(val) : `${formatCount(val)}건`;
+                    return ` ${ctx.label}: ${formatted} (${pct}%)`;
+                  }
+                }
+              }
+            }
+          }
+        });
+      }
+
+      const barMap = {
+        category: m.categoryEntries,
+        channel: m.channelEntries,
+        tier: m.tierEntries,
+        brand: m.brandEntries,
+        region: m.regionEntries
+      };
+      const entries = barMap[chartId] || [];
+      const horizontal = chartId === "brand" || (chartId === "category" && entries.length > 6);
+
+      return new Chart(canvas, {
+        type: "bar",
+        data: {
+          labels: entries.map(([k]) => k),
+          datasets: [{
+            data: entries.map(([, v]) => v),
+            backgroundColor: entries.map((_, i) => colors[i % colors.length]),
+            borderRadius: 4
+          }]
+        },
+        options: {
+          ...baseOpts,
+          indexAxis: horizontal ? "y" : "x",
+          plugins: {
+            ...baseOpts.plugins,
+            tooltip: {
+              callbacks: {
+                label(ctx) {
+                  const val = horizontal ? (ctx.parsed.x ?? 0) : (ctx.parsed.y ?? 0);
+                  return ` ${formatMoney(val)}`;
+                }
+              }
+            }
+          },
+          scales: horizontal
+            ? {
+                x: { beginAtZero: true, ticks: valueTicks, grid: { color: "#f1f5f9" } },
+                y: { grid: { display: false } }
+              }
+            : {
+                y: { beginAtZero: true, ticks: valueTicks, grid: { color: "#f1f5f9" } },
+                x: { grid: { display: false }, ticks: { font: { size: 10 }, maxRotation: 45 } }
+              }
+        }
+      });
+    }
+
+    function renderReportCharts() {
+      destroyReportCharts();
+      if (!canRenderDashboard()) return;
+
+      const m = computeDashboardMetrics();
+      document.querySelectorAll("#reportDocument canvas[data-report-chart]").forEach((canvas) => {
+        const chartId = canvas.dataset.reportChart;
+        if (!chartId || !isValidReportChartId(chartId)) return;
+        if (!REPORT_CHART_META[chartId].available(m)) return;
+        reportChartInstances[canvas.id] = createReportChart(canvas, chartId, m);
+      });
+    }
+
+    function collectReportChartImages() {
+      const images = {};
+      document.querySelectorAll("#reportDocument canvas[data-report-chart]").forEach((canvas) => {
+        const chartId = canvas.dataset.reportChart;
+        if (!chartId || images[chartId]) return;
+        try {
+          if (canvas.width > 0) images[chartId] = canvas.toDataURL("image/png");
+        } catch {
+          // ignore tainted canvas
+        }
+      });
+      return images;
+    }
+
+    function buildReportDocumentHtml(report, generatedAt, options = {}) {
+      const chartImages = options.chartImages || {};
+      const m = computeDashboardMetrics();
+      reportChartUid = 0;
+
+      let hasAnyCharts = false;
       const sectionsHtml = (report.sections || [])
         .map((sec) => {
+          const chartIds = resolveSectionChartIds(sec, m);
+          if (chartIds.length) hasAnyCharts = true;
           const paragraphs = String(sec.content || "")
             .split(/\n\n+/)
             .filter(Boolean)
@@ -3117,10 +3316,28 @@
             <div class="report-block">
               <h3>${escapeHtml(sec.heading)}</h3>
               ${paragraphs}
+              ${buildReportChartsHtml(chartIds, chartImages)}
             </div>
           `;
         })
         .join("");
+
+      let appendixChartsHtml = "";
+      if (!hasAnyCharts) {
+        const fallbackIds = ["monthly", "channel", "category", "payment"]
+          .filter((id) => REPORT_CHART_META[id].available(m))
+          .slice(0, 4);
+        if (fallbackIds.length) {
+          hasAnyCharts = true;
+          appendixChartsHtml = `
+            <div class="report-block">
+              <h3>주요 데이터 시각화</h3>
+              <p>핵심 지표를 차트로 요약했습니다.</p>
+              ${buildReportChartsHtml(fallbackIds, chartImages)}
+            </div>
+          `;
+        }
+      }
 
       const listHtml = (items, cls = "") => {
         if (!items?.length) return "";
@@ -3131,12 +3348,13 @@
         <div class="report-doc-header">
           <div class="report-doc-badge">ERP AI 분석 보고서</div>
           <h1 class="report-doc-title">${escapeHtml(report.title || "ERP 데이터 분석 보고서")}</h1>
-          <div class="report-doc-date">생성일: ${escapeHtml(dateStr)} · Powered by Gemini</div>
+          <div class="report-doc-date">생성일: ${escapeHtml(new Date(generatedAt).toLocaleString("ko-KR"))} · Powered by Gemini</div>
         </div>
         <div class="report-summary-box">
           <h3>경영 요약</h3>
           <p>${escapeHtml(report.executiveSummary || "")}</p>
         </div>
+        ${appendixChartsHtml}
         ${sectionsHtml}
         ${report.keyFindings?.length ? `
           <div class="report-block">
@@ -3183,10 +3401,14 @@
 
     function renderReportDocument(data) {
       const doc = document.getElementById("reportDocument");
+      destroyReportCharts();
       doc.innerHTML = buildReportDocumentHtml(data.report, data.generatedAt);
       document.getElementById("reportMeta").textContent =
         `마지막 생성: ${new Date(data.generatedAt).toLocaleString("ko-KR")}`;
       doc.style.display = "";
+      requestAnimationFrame(() => {
+        renderReportCharts();
+      });
     }
 
     function setReportLoading(loading) {
@@ -3292,16 +3514,21 @@
       const title = cachedReportData.report?.title || "ERP_분석보고서";
       const filename = `${title.replace(/[^\w가-힣]+/g, "_")}_${new Date().toISOString().slice(0, 10)}.pdf`;
 
-      html2pdf().set({
-        margin: [12, 14, 12, 14],
-        filename,
-        image: { type: "jpeg", quality: 0.98 },
-        html2canvas: { scale: 2, useCORS: true },
-        jsPDF: { unit: "mm", format: "a4", orientation: "portrait" }
-      }).from(element).save().then(() => {
-        showToast("PDF 다운로드가 시작되었습니다.");
-      }).catch(() => {
-        showToast("PDF 생성 중 오류가 발생했습니다.", true);
+      renderReportCharts();
+      requestAnimationFrame(() => {
+        setTimeout(() => {
+          html2pdf().set({
+            margin: [12, 14, 12, 14],
+            filename,
+            image: { type: "jpeg", quality: 0.98 },
+            html2canvas: { scale: 2, useCORS: true },
+            jsPDF: { unit: "mm", format: "a4", orientation: "portrait" }
+          }).from(element).save().then(() => {
+            showToast("PDF 다운로드가 시작되었습니다.");
+          }).catch(() => {
+            showToast("PDF 생성 중 오류가 발생했습니다.", true);
+          });
+        }, 200);
       });
     }
 
@@ -3310,10 +3537,22 @@
         showToast("먼저 보고서를 생성해 주세요.", true);
         return;
       }
-      const html = buildReportDocumentHtml(
-        cachedReportData.report,
-        cachedReportData.generatedAt
-      );
+
+      renderReportCharts();
+      requestAnimationFrame(() => {
+        setTimeout(() => {
+          const chartImages = collectReportChartImages();
+          const html = buildReportDocumentHtml(
+            cachedReportData.report,
+            cachedReportData.generatedAt,
+            { chartImages }
+          );
+          exportReportWordFile(html);
+        }, 200);
+      });
+    }
+
+    function exportReportWordFile(html) {
       const title = cachedReportData.report?.title || "ERP_분석보고서";
       const filename = `${title.replace(/[^\w가-힣]+/g, "_")}_${new Date().toISOString().slice(0, 10)}.doc`;
 
@@ -3328,6 +3567,10 @@
   h3 { font-size: 13pt; color: #0f172a; margin-top: 18pt; border-bottom: 1px solid #e2e8f0; padding-bottom: 4pt; }
   p, li { font-size: 11pt; line-height: 1.7; }
   .report-summary-box { background: #eff6ff; padding: 12pt; margin: 12pt 0; }
+  .report-chart-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12pt; margin: 12pt 0; }
+  .report-chart-card { border: 1px solid #e2e8f0; border-radius: 6pt; padding: 8pt; }
+  .report-chart-title { font-size: 10pt; font-weight: bold; margin-bottom: 6pt; color: #334155; }
+  .report-chart-image { width: 100%; height: auto; display: block; }
 </style>
 </head><body>${html}</body></html>`;
 
@@ -3421,7 +3664,6 @@
         : `<tr><td colspan="${current.headers.length}" style="text-align:center;color:var(--text-muted);">데이터 없음</td></tr>`;
 
       renderRawdataPagination(totalPages, totalRows, start, pageData.length);
-      scheduleDashboardListStickyHeaders();
     }
 
     function renderRawdataPagination(totalPages, totalRows, start, shown) {
@@ -3552,7 +3794,7 @@
     updateTopbarDashboardActions();
     updateStickyChromeTop();
     window.addEventListener("resize", updateStickyChromeTop);
-    window.addEventListener("scroll", scheduleDashboardListStickyHeaders, { passive: true });
+    window.addEventListener("scroll", updateStickyChromeTop, { passive: true });
   </script>
 </body>
 </html>
